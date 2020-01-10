@@ -1,0 +1,1 @@
+This contains scripts for building Python on Android.
