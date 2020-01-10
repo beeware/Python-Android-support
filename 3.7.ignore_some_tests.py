@@ -16,7 +16,15 @@ def fix(filename):
     matching_lines = []
     splitted = contents.split("\n")
     for i, line in enumerate(splitted):
-        if "subprocess.Popen(" in line:
+        if (
+            "subprocess.Popen(" in line
+            or "subprocess.run(" in line
+            or "subprocess.check_output(" in line
+            or "spawn(" in line
+            or "Platform.popen(" in line
+            or "os.popen(" in line
+            or "os.spawnl(" in line
+        ):
             matching_lines.append(i)
 
     # If there is nothing to do, we do nothing.
