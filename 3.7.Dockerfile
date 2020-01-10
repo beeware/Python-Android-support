@@ -80,7 +80,8 @@ RUN git clone -b cross-compile https://github.com/paulproteus/rubicon-java.git &
     cd rubicon-java && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
 RUN mv rubicon-java/dist/librubicon.so $JNI_LIBS
-RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java/dist/rubicon.jar /opt/python-build/app/libs/
+RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java/dist/rubicon.jar $APPROOT/app/libs/
+RUN cd rubicon-java && zip -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 # Add rsync, which is used by `3.7.sh` to copy the data out of the container.
 RUN apt-get update -qq && apt-get -qq install rsync
