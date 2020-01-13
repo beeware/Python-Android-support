@@ -31,7 +31,7 @@ def fix(filename):
             or "subprocess.run(" in line
             or "subprocess.check_output(" in line
             or "subprocess.check_call(" in line
-            or "spawn(" in line
+            or " spawn(" in line
             or "platform.popen(" in line
             or "os.popen(" in line
             or "os.spawnl(" in line

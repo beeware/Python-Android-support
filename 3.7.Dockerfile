@@ -66,12 +66,16 @@ RUN sed -i -e "s#NotADirectoryError#NotADirectoryError, OSError#" Python-3.7.6/L
 ADD 3.7.ignore_some_tests.py .
 RUN python3.7 3.7.ignore_some_tests.py $(find Python-3.7.6/Lib/test -iname '*.py') $(find Python-3.7.6/Lib/distutils/tests -iname '*.py') $(find Python-3.7.6/Lib/unittest/test/ -iname '*.py') $(find Python-3.7.6/Lib/lib2to3/tests -iname '*.py')
 
-# Build Python
+# Build Python, pre-configuring some values so it doesn't check if those exist.
 RUN cd Python-3.7.6 && LDFLAGS=`pkg-config --libs-only-L libffi` \
   ./configure --host "$TARGET" --build "$TARGET""$ANDROID_SDK_VERSION" --enable-shared \
   --enable-ipv6 ac_cv_file__dev_ptmx=yes \
   ac_cv_file__dev_ptc=no --without-ensurepip ac_cv_little_endian_double=yes \
-  --prefix="$PYTHON_INSTALL_DIR" && make && make install
+  --prefix="$PYTHON_INSTALL_DIR" \
+  ac_cv_func_setuid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no
+# Override ./configure results to futher force Python not to use some libc calls that trigger blocked syscalls.
+RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS) 1,,' pyconfig.h
+RUN cd Python-3.7.6 && make && make install
 # Copy the entire Python install, including bin/python3 and the standard library, into a ZIP file we use as an app asset.
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -q "$ASSETS_DIR"/pythonhome.zip -r .
@@ -84,7 +88,7 @@ RUN git clone -b cross-compile https://github.com/paulproteus/rubicon-java.git &
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
 RUN mv rubicon-java/dist/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java/dist/rubicon.jar $APPROOT/app/libs/
-RUN cd rubicon-java && zip -q "$ASSETS_DIR"/rubicon.zip -r rubicon
+RUN cd rubicon-java && zip -0 -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 # Add rsync, which is used by `3.7.sh` to copy the data out of the container.
 RUN apt-get update -qq && apt-get -qq install rsync
