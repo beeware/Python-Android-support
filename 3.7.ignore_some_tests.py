@@ -50,6 +50,7 @@ def fix(filename):
             or " self.assertEqual(exitcode, self.exitcode)" in line
             or ' os.spawnv(' in line
             # Disable some test_posix tests
+            # TODO(someday): Remove these functions entirely.
             or ' posix.sched_getscheduler(' in line
             or ' posix.execve(' in line
         ):
