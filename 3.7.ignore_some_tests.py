@@ -42,6 +42,8 @@ def fix(filename):
             or "= self.decide_itimer_count()" in line
             # some tests try to make a socket with no params; somehow this is not OK on Android!
             or "socket.socket()" in line
+            # one test tries to do os.chdir('/') to get the top of the filesystem tree, then os.listdir(). This will not work.
+            or " self.assertEqual(set(os.listdir()), set(os.listdir(os.sep)))" in line
         ):
             matching_lines.append(i)
 
@@ -63,7 +65,7 @@ def fix(filename):
                 num_spaces = len(match.group(0))
                 line = (
                     " " * num_spaces
-                    + 'raise unittest.SkipTest("Skipping because subprocess not available")'
+                    + 'raise unittest.SkipTest("Skipping this test for Python within an Android app")'
                     + "\n"
                     + line
                 )
