@@ -49,6 +49,9 @@ def fix(filename):
             # process exit codes are weird
             or " self.assertEqual(exitcode, self.exitcode)" in line
             or ' os.spawnv(' in line
+            # Disable some test_posix tests
+            or ' posix.sched_getscheduler(' in line
+            or ' posix.execve(' in line
         ):
             matching_lines.append(i)
 
