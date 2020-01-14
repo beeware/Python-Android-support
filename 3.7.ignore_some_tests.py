@@ -44,6 +44,8 @@ def fix(filename):
             or "socket.socket()" in line
             # one test tries to do os.chdir('/') to get the top of the filesystem tree, then os.listdir(). This will not work.
             or " self.assertEqual(set(os.listdir()), set(os.listdir(os.sep)))" in line
+            # os.get_terminal_size() doesn't work for now
+            or " os.get_terminal_size()" in line
         ):
             matching_lines.append(i)
 
