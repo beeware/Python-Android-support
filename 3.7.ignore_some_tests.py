@@ -48,6 +48,7 @@ def fix(filename):
             or " os.get_terminal_size()" in line
             # process exit codes are weird
             or " self.assertEqual(exitcode, self.exitcode)" in line
+            or ' os.spawnv(' in line
         ):
             matching_lines.append(i)
 
