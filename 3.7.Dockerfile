@@ -78,7 +78,7 @@ RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS) 1,,' py
 RUN cd Python-3.7.6 && make && make install
 # Copy the entire Python install, including bin/python3 and the standard library, into a ZIP file we use as an app asset.
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
-RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -q "$ASSETS_DIR"/pythonhome.zip -r .
+RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.zip -r .
 # Copy libpython into the app as a JNI library.
 RUN cp -a $PYTHON_INSTALL_DIR/lib/*.so $PYTHON_INSTALL_DIR/lib/*.so.* "$JNI_LIBS"
 
