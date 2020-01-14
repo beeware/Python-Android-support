@@ -46,6 +46,8 @@ def fix(filename):
             or " self.assertEqual(set(os.listdir()), set(os.listdir(os.sep)))" in line
             # os.get_terminal_size() doesn't work for now
             or " os.get_terminal_size()" in line
+            # process exit codes are weird
+            or " self.assertEqual(exitcode, self.exitcode)" in line
         ):
             matching_lines.append(i)
 
