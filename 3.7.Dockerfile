@@ -67,7 +67,7 @@ ENV PKG_CONFIG_PATH="$LIBFFI_INSTALL_DIR/lib/pkgconfig"
 COPY --from=opensslbuild /opt/python-build/built/openssl /opt/python-build/built/openssl
 ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
 # Remove the .1.1 symlinks, because maybe they confuse Android.
-RUN for lib in ssl crypto; do rm "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so && mv "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so.1.1 "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so; cp "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so "$JNI_LIBS"; done
+RUN cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$JNI_LIBS"
 
 # Download & patch Python
 RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip xz-utils
@@ -78,6 +78,8 @@ RUN sed -i -e s,'libraries or \[\],\["python3.7m"] + libraries if libraries else
 RUN sed -i -e "s# dirs = \[\]# dirs = \[os.environ.get('NDK') + \"/sysroot/usr/include\", os.environ.get('TOOLCHAIN') + \"/sysroot/usr/lib/\" + os.environ.get('TARGET') + '/' + os.environ.get('ANDROID_SDK_VERSION')\]#" Python-3.7.6/setup.py
 # Apply a hack to make platform.py stop looking for a libc version.
 RUN sed -i -e "s#Linux#DisabledLinuxCheck#" Python-3.7.6/Lib/platform.py
+# Apply a hack to ctypes so that it loads libpython.so, even though this isn't Windows.
+RUN sed -i -e 's,pythonapi = PyDLL(None),pythonapi = PyDLL("libpython3.7m.so"),' Python-3.7.6/Lib/ctypes/__init__.py
 # Hack the test suite so that when it tries to remove files, if it can't remove them, the error passes silently.
 # To see if ths is still an issue, run `test_bdb`.
 RUN sed -i -e "s#NotADirectoryError#NotADirectoryError, OSError#" Python-3.7.6/Lib/test/support/__init__.py
