@@ -41,18 +41,26 @@ def fix(filename):
             # some tests find out that we're bad at passing 100% of UNIX signals to Python; sorry!
             or "= self.decide_itimer_count()" in line
             # some tests try to make a socket with no params; somehow this is not OK on Android!
-            or "socket.socket()" in line
+            # or "socket.socket()" in line
             # one test tries to do os.chdir('/') to get the top of the filesystem tree, then os.listdir(). This will not work.
             or " self.assertEqual(set(os.listdir()), set(os.listdir(os.sep)))" in line
             # os.get_terminal_size() doesn't work for now
-            or " os.get_terminal_size()" in line
+            or (
+                " os.get_terminal_size()" in line
+                and not " os.get_terminal_size()'" in line
+            )
             # process exit codes are weird
             or " self.assertEqual(exitcode, self.exitcode)" in line
-            or ' os.spawnv(' in line
+            or " os.spawnv(" in line
             # Disable some test_posix tests
             # TODO(someday): Remove these functions entirely.
-            or ' posix.sched_getscheduler(' in line
-            or ' posix.execve(' in line
+            or " posix.sched_getscheduler(" in line
+            or " posix.execve(" in line
+            # Disable the group module's beliefs that all gr_name values are strings;
+            # on Android, somehow, they're None.
+            or "self.assertIsInstance(value.gr_name, str)" in line
+            # Similar for pwd (password file) module
+            or "self.assertIsInstance(e.pw_gecos, str)" in line
         ):
             matching_lines.append(i)
 
