@@ -37,6 +37,18 @@ ENV BUILD_HOME "/opt/python-build"
 ENV PYTHON_INSTALL_DIR="$BUILD_HOME/built/python"
 WORKDIR /opt/python-build
 
+FROM toolchain as opensslbuild
+# OpenSSL requires libfindlibs-libs-perl. make is nice, too.
+RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
+RUN wget -q https://www.openssl.org/source/openssl-1.1.1d.tar.gz && sha256sum openssl-1.1.1d.tar.gz | grep -q 1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2 && tar xf openssl-1.1.1d.tar.gz && rm -rf openssl-1.1.1d.tar.gz
+# TODO(someday): Test out `no-comp`. This is only here to avoid a libz dependency. See:
+# https://stackoverflow.com/questions/57083946/android-openssl-1-1-1-unsatisfiedlinkerror
+# I'm not even sure it matters.
+RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure linux-x86_64 -D__ANDROID_API__="$ANDROID_SDK_VERSION" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
+RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN ls -l $BUILD_HOME/built/openssl/lib
+
 # This build container builds Python, rubicon-java, and any dependencies.
 FROM toolchain as build
 
@@ -49,6 +61,13 @@ RUN mkdir -p "$LIBFFI_INSTALL_DIR" && \
     ./configure --host "$TARGET" --build "$TARGET""$ANDROID_SDK_VERSION" --prefix="$LIBFFI_INSTALL_DIR" && \
     make clean install && mkdir -p "$JNI_LIBS" && cp "$LIBFFI_INSTALL_DIR"/lib/libffi*so "$JNI_LIBS"
 ENV PKG_CONFIG_PATH="$LIBFFI_INSTALL_DIR/lib/pkgconfig"
+
+# Get OpenSSL from earlier build phase
+# Copy OpenSSL from previous stage
+COPY --from=opensslbuild /opt/python-build/built/openssl /opt/python-build/built/openssl
+ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
+# Remove the .1.1 symlinks, because maybe they confuse Android.
+RUN for lib in ssl crypto; do rm "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so && mv "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so.1.1 "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so; cp "$OPENSSL_INSTALL_DIR"/lib/lib${lib}.so "$JNI_LIBS"; done
 
 # Download & patch Python
 RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip xz-utils
@@ -67,9 +86,10 @@ ADD 3.7.ignore_some_tests.py .
 RUN python3.7 3.7.ignore_some_tests.py $(find Python-3.7.6/Lib/test -iname '*.py') $(find Python-3.7.6/Lib/distutils/tests -iname '*.py') $(find Python-3.7.6/Lib/unittest/test/ -iname '*.py') $(find Python-3.7.6/Lib/lib2to3/tests -iname '*.py')
 
 # Build Python, pre-configuring some values so it doesn't check if those exist.
-RUN cd Python-3.7.6 && LDFLAGS=`pkg-config --libs-only-L libffi` \
+RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) -L$OPENSSL_INSTALL_DIR/lib" \
   ./configure --host "$TARGET" --build "$TARGET""$ANDROID_SDK_VERSION" --enable-shared \
   --enable-ipv6 ac_cv_file__dev_ptmx=yes \
+  --with-openssl=$OPENSSL_INSTALL_DIR \
   ac_cv_file__dev_ptc=no --without-ensurepip ac_cv_little_endian_double=yes \
   --prefix="$PYTHON_INSTALL_DIR" \
   ac_cv_func_setuid=no ac_cv_func_seteuid=no ac_cv_func_setegid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no ac_cv_header_termios_h=no ac_cv_func_sendfile=no ac_cv_header_spawn_h=no ac_cv_func_posix_spawn=no
