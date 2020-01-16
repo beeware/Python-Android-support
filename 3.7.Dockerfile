@@ -72,6 +72,8 @@ RUN cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$JNI_LIBS"
 # Download & patch Python
 RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip xz-utils
 RUN wget -q https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz && tar xf Python-3.7.6.tar.xz && rm Python-3.7.6.tar.xz
+# Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
+RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
 RUN sed -i -e s,'libraries or \[\],\["python3.7m"] + libraries if libraries else \["python3.7m"\],' Python-3.7.6/Lib/distutils/extension.py
 # Apply a hack to get the NDK library paths into the Python build. TODO(someday): Discuss with e.g. Kivy and see how to remove this.
@@ -109,7 +111,7 @@ RUN cd Python-3.7.6 && make && make install
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.zip -r .
 # Copy libpython into the app as a JNI library.
-RUN cp -a $PYTHON_INSTALL_DIR/lib/*.so $PYTHON_INSTALL_DIR/lib/*.so.* "$JNI_LIBS"
+RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython3.7m.so "$JNI_LIBS"
 
 # Download & install rubicon-java.
 RUN git clone -b cross-compile https://github.com/paulproteus/rubicon-java.git && \
