@@ -15,11 +15,17 @@ ENV PATH "/opt/jdk/jdk-11.0.5+10/bin:${PATH}"
 
 # Store output here; the directory structure corresponds to our Android app template.
 ENV APPROOT /opt/python-build/approot
-ENV JNI_LIBS $APPROOT/app/libs/x86_64
+# Do our Python build work here
+ENV BUILD_HOME "/opt/python-build"
+ENV PYTHON_INSTALL_DIR="$BUILD_HOME/built/python"
+WORKDIR /opt/python-build
 
 # Configure build variables
 ENV HOST_TAG="linux-x86_64"
-ENV TARGET="x86_64-linux-android"
+ARG TARGET_ABI_SHORTNAME
+ENV TARGET_ABI_SHORTNAME $TARGET_ABI_SHORTNAME
+ENV JNI_LIBS $APPROOT/app/libs/${TARGET_ABI_SHORTNAME}
+ENV TARGET="${TARGET_ABI_SHORTNAME}-linux-android"
 ENV ANDROID_SDK_VERSION="29"
 ENV TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST_TAG
 ENV AR=$TOOLCHAIN/bin/$TARGET-ar \
@@ -32,25 +38,17 @@ ENV AR=$TOOLCHAIN/bin/$TARGET-ar \
     READELF=$TOOLCHAIN/bin/$TARGET-readelf \
     CFLAGS="-fPIC -Wall -O0 -g"
 
-# Do our Python build work here
-ENV BUILD_HOME "/opt/python-build"
-ENV PYTHON_INSTALL_DIR="$BUILD_HOME/built/python"
-WORKDIR /opt/python-build
-
-FROM toolchain as opensslbuild
+FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
 RUN wget -q https://www.openssl.org/source/openssl-1.1.1d.tar.gz && sha256sum openssl-1.1.1d.tar.gz | grep -q 1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2 && tar xf openssl-1.1.1d.tar.gz && rm -rf openssl-1.1.1d.tar.gz
-# TODO(someday): Test out `no-comp`. This is only here to avoid a libz dependency. See:
-# https://stackoverflow.com/questions/57083946/android-openssl-1-1-1-unsatisfiedlinkerror
-# I'm not even sure it matters.
-RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure linux-x86_64 -D__ANDROID_API__="$ANDROID_SDK_VERSION" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
+RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure linux-${TARGET_ABI_SHORTNAME} -D__ANDROID_API__="$ANDROID_SDK_VERSION" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
 RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN ls -l $BUILD_HOME/built/openssl/lib
 
 # This build container builds Python, rubicon-java, and any dependencies.
-FROM toolchain as build
+FROM toolchain as build_python
 
 # Install libffi, required for ctypes.
 RUN apt-get update -qq && apt-get -qq install file make
@@ -64,7 +62,7 @@ ENV PKG_CONFIG_PATH="$LIBFFI_INSTALL_DIR/lib/pkgconfig"
 
 # Get OpenSSL from earlier build phase
 # Copy OpenSSL from previous stage
-COPY --from=opensslbuild /opt/python-build/built/openssl /opt/python-build/built/openssl
+COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
 ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
 # Remove the .1.1 symlinks, because maybe they confuse Android.
 RUN cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$JNI_LIBS"
@@ -115,7 +113,7 @@ RUN cd Python-3.7.6 && rm Lib/test/test_wsgiref.py
 RUN cd Python-3.7.6 && make && make install
 # Copy the entire Python install, including bin/python3 and the standard library, into a ZIP file we use as an app asset.
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
-RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.zip -r .
+RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
 # Copy libpython into the app as a JNI library.
 RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython3.7m.so "$JNI_LIBS"
 
