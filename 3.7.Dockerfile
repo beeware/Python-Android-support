@@ -24,25 +24,30 @@ WORKDIR /opt/python-build
 ENV HOST_TAG="linux-x86_64"
 ARG TARGET_ABI_SHORTNAME
 ENV TARGET_ABI_SHORTNAME $TARGET_ABI_SHORTNAME
+ARG ANDROID_API_LEVEL
+ENV ANDROID_API_LEVEL $ANDROID_API_LEVEL
 ENV JNI_LIBS $APPROOT/app/libs/${TARGET_ABI_SHORTNAME}
-ENV TARGET="${TARGET_ABI_SHORTNAME}-linux-android"
-ENV ANDROID_SDK_VERSION="29"
+ARG TOOLCHAIN_TRIPLE
+ENV TOOLCHAIN_TRIPLE $TOOLCHAIN_TRIPLE
 ENV TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST_TAG
-ENV AR=$TOOLCHAIN/bin/$TARGET-ar \
-    AS=$TOOLCHAIN/bin/$TARGET-as \
-    CC=$TOOLCHAIN/bin/${TARGET}${ANDROID_SDK_VERSION}-clang \
-    CXX=$TOOLCHAIN/bin/${TARGET}${ANDROID_SDK_VERSION}-clang++ \
-    LD=$TOOLCHAIN/bin/$TARGET-ld \
-    RANLIB=$TOOLCHAIN/bin/$TARGET-ranlib \
-    STRIP=$TOOLCHAIN/bin/$TARGET-strip \
-    READELF=$TOOLCHAIN/bin/$TARGET-readelf \
+ARG COMPILER_TRIPLE
+ENV COMPILER_TRIPLE=$COMPILER_TRIPLE
+ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
+    AS=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-as \
+    CC=$TOOLCHAIN/bin/${COMPILER_TRIPLE}-clang \
+    CXX=$TOOLCHAIN/bin/${COMPILER_TRIPLE}-clang++ \
+    LD=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ld \
+    RANLIB=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ranlib \
+    STRIP=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-strip \
+    READELF=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-readelf \
     CFLAGS="-fPIC -Wall -O0 -g"
 
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
 RUN wget -q https://www.openssl.org/source/openssl-1.1.1d.tar.gz && sha256sum openssl-1.1.1d.tar.gz | grep -q 1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2 && tar xf openssl-1.1.1d.tar.gz && rm -rf openssl-1.1.1d.tar.gz
-RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure linux-${TARGET_ABI_SHORTNAME} -D__ANDROID_API__="$ANDROID_SDK_VERSION" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
+ARG OPENSSL_BUILD_TARGET
+RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
 RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN ls -l $BUILD_HOME/built/openssl/lib
@@ -56,7 +61,7 @@ RUN wget -q https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.t
 ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
 RUN mkdir -p "$LIBFFI_INSTALL_DIR" && \
     cd libffi-3.3 && \
-    ./configure --host "$TARGET" --build "$TARGET""$ANDROID_SDK_VERSION" --prefix="$LIBFFI_INSTALL_DIR" && \
+    ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR" && \
     make clean install && mkdir -p "$JNI_LIBS" && cp "$LIBFFI_INSTALL_DIR"/lib/libffi*so "$JNI_LIBS"
 ENV PKG_CONFIG_PATH="$LIBFFI_INSTALL_DIR/lib/pkgconfig"
 
@@ -75,7 +80,7 @@ RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
 RUN sed -i -e s,'libraries or \[\],\["python3.7m"] + libraries if libraries else \["python3.7m"\],' Python-3.7.6/Lib/distutils/extension.py
 # Apply a hack to get the NDK library paths into the Python build. TODO(someday): Discuss with e.g. Kivy and see how to remove this.
-RUN sed -i -e "s# dirs = \[\]# dirs = \[os.environ.get('NDK') + \"/sysroot/usr/include\", os.environ.get('TOOLCHAIN') + \"/sysroot/usr/lib/\" + os.environ.get('TARGET') + '/' + os.environ.get('ANDROID_SDK_VERSION')\]#" Python-3.7.6/setup.py
+RUN sed -i -e "s# dirs = \[\]# dirs = \[os.environ.get('NDK') + \"/sysroot/usr/include\", os.environ.get('TOOLCHAIN') + \"/sysroot/usr/lib/\" + os.environ.get('COMPILER_TRIPLE')\]#" Python-3.7.6/setup.py
 # Apply a hack to make platform.py stop looking for a libc version.
 RUN sed -i -e "s#Linux#DisabledLinuxCheck#" Python-3.7.6/Lib/platform.py
 # Apply a hack to ctypes so that it loads libpython.so, even though this isn't Windows.
@@ -89,12 +94,13 @@ RUN python3.7 3.7.ignore_some_tests.py $(find Python-3.7.6/Lib/test -iname '*.py
 
 # Build Python, pre-configuring some values so it doesn't check if those exist.
 RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) -L$OPENSSL_INSTALL_DIR/lib" \
-  ./configure --host "$TARGET" --build "$TARGET""$ANDROID_SDK_VERSION" --enable-shared \
-  --enable-ipv6 ac_cv_file__dev_ptmx=yes \
-  --with-openssl=$OPENSSL_INSTALL_DIR \
-  ac_cv_file__dev_ptc=no --without-ensurepip ac_cv_little_endian_double=yes \
-  --prefix="$PYTHON_INSTALL_DIR" \
-  ac_cv_func_setuid=no ac_cv_func_seteuid=no ac_cv_func_setegid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no ac_cv_header_termios_h=no ac_cv_func_sendfile=no ac_cv_header_spawn_h=no ac_cv_func_posix_spawn=no
+    ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --enable-shared \
+    --enable-ipv6 ac_cv_file__dev_ptmx=yes \
+    --with-openssl=$OPENSSL_INSTALL_DIR \
+    ac_cv_file__dev_ptc=no --without-ensurepip ac_cv_little_endian_double=yes \
+    --prefix="$PYTHON_INSTALL_DIR" \
+    ac_cv_func_setuid=no ac_cv_func_seteuid=no ac_cv_func_setegid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no ac_cv_header_termios_h=no ac_cv_func_sendfile=no ac_cv_header_spawn_h=no ac_cv_func_posix_spawn=no \
+    ac_cv_func_setlocale=no
 # Override ./configure results to futher force Python not to use some libc calls that trigger blocked syscalls.
 # TODO(someday): See if HAVE_INITGROUPS has another way to disable it.
 RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS|HAVE_INITGROUPS) 1,,' pyconfig.h
