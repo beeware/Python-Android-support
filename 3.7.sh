@@ -3,7 +3,7 @@ set -eou pipefail
 chmod -R u+rw output/3.7 || sudo chown -R "$USER" output/3.7
 rm -rf ./output/3.7
 mkdir -p output/3.7
-for TARGET_ABI_SHORTNAME in armeabi-v7a arm64-v8a x86 x86_64; do
+for TARGET_ABI_SHORTNAME in x86 armeabi-v7a arm64-v8a x86_84; do
     # Using ANDROID_API_LEVEL=21 allows us to have a localeconv function (admittedly a non-working one),
     # which makes compiling (well, linking) Python easier.
     #
