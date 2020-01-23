@@ -5,6 +5,10 @@ LEADING_SPACES_RE = re.compile("^( +)")
 
 
 def fix(filename):
+    # Don't apply these hacks to script_helper.py directly.
+    if filename.endswith('script_helper.py'):
+        return
+
     with open(filename) as fd:
         try:
             contents = fd.read()
