@@ -31,7 +31,6 @@ def fix(filename):
             # Skip a specific zipimport-related test :(
             or "then check that the filter works on individual files" in line
             # The following avoid executing subprocesses via tests.
-            or "subprocess.Popen(" in line
             or "subprocess.run(" in line
             or "subprocess.check_output(" in line
             or "subprocess.check_call(" in line
