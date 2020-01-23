@@ -108,10 +108,9 @@ RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS|HAVE_INI
 RUN cd Python-3.7.6 && sed -i -E 's,#define.*(HAVE_EXECV|HAVE_FORK).*1,,' Modules/posixmodule.c
 # TODO(someday): restore asyncio tests & fix them
 RUN cd Python-3.7.6 && rm -rf Lib/test/test_asyncio
-# TODO(someday): restore test_doctest; right now, like on iOS, this test suite fails
-# in a way relating to using subprocesses to extract the doctests from a file, and this
-# is not relevant to us for Python on Android.
-RUN cd Python-3.7.6 && rm Lib/test/test_doctest.py
+# TODO(someday): Restore test_httpservers tests. They depend on os.setuid() existing, and they have
+# little meaning in Android.
+RUN cd Python-3.7.6 && rm Lib/test/test_httpservers.py
 # TODO(someday): restore xmlrpc tests & fix them; right now they hang forever.
 RUN cd Python-3.7.6 && rm Lib/test/test_xmlrpc.py
 # TODO(someday): restore wsgiref tests & fix them; right now they hang forever.
