@@ -2,7 +2,7 @@
 # downloads essential dependencies.
 FROM ubuntu:18.04 as toolchain
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && apt-get -qq install unzip xz-utils
+RUN apt-get update -qq && apt-get -qq install unzip
 
 # Install toolchains: Android NDK & Java JDK.
 WORKDIR /opt/ndk
@@ -43,6 +43,37 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
     READELF=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-readelf \
     CFLAGS="-fPIC -Wall -O0 -g"
 
+# Install bzip2 & lzma libraries, for stdlib's _bzip2 and _lzma modules.
+FROM toolchain as build_xz
+RUN apt-get update -qq && apt-get -qq install make
+ADD download-cache/xz-5.2.4.tar.gz .
+ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
+RUN mkdir -p "$LIBXZ_INSTALL_DIR"
+RUN cd xz-5.2.4 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBXZ_INSTALL_DIR"
+RUN cd xz-5.2.4 && make install
+
+FROM toolchain as build_bz2
+RUN apt-get update -qq && apt-get -qq install make
+ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
+ADD download-cache/bzip2-1.0.8.tar.gz .
+RUN mkdir -p "$LIBBZ2_INSTALL_DIR" && \
+    cd bzip2-1.0.8 && \
+    sed -i -e 's,[.]1[.]0.8,,' -e 's,[.]1[.]0,,' -e 's,ln -s,#ln -s,' -e 's,rm -f libbz2.so,#rm -f libbz2.so,' -e 's,^CC=,#CC=,' Makefile-libbz2_so
+RUN cd bzip2-1.0.8 && make -f Makefile-libbz2_so
+RUN mkdir -p "${LIBBZ2_INSTALL_DIR}/lib"
+RUN cp bzip2-1.0.8/libbz2.so "${LIBBZ2_INSTALL_DIR}/lib"
+RUN mkdir -p "${LIBBZ2_INSTALL_DIR}/include"
+RUN cp bzip2-1.0.8/bzlib.h "${LIBBZ2_INSTALL_DIR}/include"
+
+# libffi is required by ctypes
+FROM toolchain as build_libffi
+RUN apt-get update -qq && apt-get -qq install file make
+ADD download-cache/libffi-3.3.tar.gz .
+ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
+RUN mkdir -p "$LIBFFI_INSTALL_DIR"
+RUN cd libffi-3.3 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR"
+RUN cd libffi-3.3 && make install
+
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
@@ -51,29 +82,24 @@ ARG OPENSSL_BUILD_TARGET
 RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
 RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
-RUN ls -l $BUILD_HOME/built/openssl/lib
 
 # This build container builds Python, rubicon-java, and any dependencies.
 FROM toolchain as build_python
+RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip
 
-# Install libffi, required for ctypes.
-RUN apt-get update -qq && apt-get -qq install file make
-ADD download-cache/libffi-3.3.tar.gz .
-ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
-RUN mkdir -p "$LIBFFI_INSTALL_DIR" && \
-    cd libffi-3.3 && \
-    ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR" && \
-    make clean install && mkdir -p "$JNI_LIBS" && cp "$LIBFFI_INSTALL_DIR"/lib/libffi*so "$JNI_LIBS"
-ENV PKG_CONFIG_PATH="$LIBFFI_INSTALL_DIR/lib/pkgconfig"
-# Get OpenSSL from earlier build phase
-# Copy OpenSSL from previous stage
+# Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
+COPY --from=build_bz2 /opt/python-build/built/libbz2 /opt/python-build/built/libbz2
+COPY --from=build_xz /opt/python-build/built/xz /opt/python-build/built/xz
+COPY --from=build_libffi /opt/python-build/built/libffi /opt/python-build/built/libffi
+
 ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
-# Remove the .1.1 symlinks, because maybe they confuse Android.
-RUN cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$JNI_LIBS"
+ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
+ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
+RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTALL_DIR"/lib/*.so /opt/python-build/built/libffi/lib/*.so /opt/python-build/built/xz/lib/*.so "$JNI_LIBS"
+ENV PKG_CONFIG_PATH="/opt/python-build/built/libffi/lib/pkgconfig:/opt/python-build/built/xz/lib/pkgconfig"
 
 # Download & patch Python
-RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip xz-utils
 ADD download-cache/Python-3.7.6.tar.xz .
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
@@ -87,7 +113,8 @@ RUN sed -i -e "s#Linux#DisabledLinuxCheck#" Python-3.7.6/Lib/platform.py
 # Build Python, pre-configuring some values so it doesn't check if those exist.
 ENV SYSROOT_LIB=${TOOLCHAIN}/sysroot/usr/lib/${TOOLCHAIN_TRIPLE}/${ANDROID_API_LEVEL}/ \
     SYSROOT_INCLUDE=${NDK}/sysroot/usr/include/
-RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) -L$OPENSSL_INSTALL_DIR/lib" \
+RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) $(pkg-config --libs-only-L liblzma) -L${LIBBZ2_INSTALL_DIR}/lib -L$OPENSSL_INSTALL_DIR/lib" \
+    CFLAGS="${CFLAGS} -I${LIBBZ2_INSTALL_DIR}/include $(pkg-config --cflags-only-I libffi) $(pkg-config --cflags-only-I liblzma) " \
     ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --enable-shared \
     --enable-ipv6 ac_cv_file__dev_ptmx=yes \
     --with-openssl=$OPENSSL_INSTALL_DIR \
@@ -100,6 +127,8 @@ RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) -L$OPENSSL_IN
 RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS|HAVE_INITGROUPS) 1,,' pyconfig.h
 # Override posixmodule.c assumption that fork & exec exist & work.
 RUN cd Python-3.7.6 && sed -i -E 's,#define.*(HAVE_EXECV|HAVE_FORK).*1,,' Modules/posixmodule.c
+# Copy libbz2 into the SYSROOT_LIB. This is the IMHO the easiest way for setup.py to find it.
+RUN cp "${LIBBZ2_INSTALL_DIR}/lib/libbz2.so" $SYSROOT_LIB
 # Compile Python. We can still remove some tests from the test suite before `make install`.
 RUN cd Python-3.7.6 && make
 
@@ -150,5 +179,4 @@ RUN mv rubicon-java/dist/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java/dist/rubicon.jar $APPROOT/app/libs/
 RUN cd rubicon-java && zip -0 -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
-# Add rsync, which is used by `3.7.sh` to copy the data out of the container.
 RUN apt-get update -qq && apt-get -qq install rsync

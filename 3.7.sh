@@ -92,6 +92,7 @@ function build_one_abi() {
     docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/approot/. /mnt/.
     # Extract pyconfig.h for debugging ./configure strangeness.
     docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_VERSION}"m/pyconfig.h /mnt/
+    fix_permissions
 }
 
 function download() {
@@ -111,6 +112,7 @@ function download_urls() {
         ["https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz"]="72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
         ["https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz"]="55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
         ["https://tukaani.org/xz/xz-5.2.4.tar.gz"]="b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
+	["https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"]="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
     )
     local DOWNLOAD_CACHE="$PWD/download-cache"
     local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
