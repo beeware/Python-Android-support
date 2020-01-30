@@ -1,15 +1,16 @@
-# This toolchain container, set up at the start of the Dockerfile, encodes environment variables &
+# The toolchain container encodes environment
 # downloads essential dependencies.
 FROM ubuntu:18.04 as toolchain
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update -qq && apt-get -qq install wget unzip xz-utils
+RUN apt-get update -qq && apt-get -qq install unzip xz-utils
 
 # Install toolchains: Android NDK & Java JDK.
 WORKDIR /opt/ndk
-RUN wget -q https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip && unzip -q android-ndk-r20b-linux-x86_64.zip && rm android-ndk-r20b-linux-x86_64.zip
+ADD download-cache/android-ndk-r20b-linux-x86_64.zip .
+RUN unzip -q android-ndk-r20b-linux-x86_64.zip && rm android-ndk-r20b-linux-x86_64.zip
 ENV NDK /opt/ndk/android-ndk-r20b
 WORKDIR /opt/jdk
-RUN wget -q https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz && tar xf OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz && rm OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz
+ADD download-cache/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz .
 ENV JAVA_HOME /opt/jdk/jdk-11.0.5+10/
 ENV PATH "/opt/jdk/jdk-11.0.5+10/bin:${PATH}"
 
@@ -45,7 +46,7 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
-RUN wget -q https://www.openssl.org/source/openssl-1.1.1d.tar.gz && sha256sum openssl-1.1.1d.tar.gz | grep -q 1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2 && tar xf openssl-1.1.1d.tar.gz && rm -rf openssl-1.1.1d.tar.gz
+ADD download-cache/openssl-1.1.1d.tar.gz .
 ARG OPENSSL_BUILD_TARGET
 RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
 RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
@@ -57,7 +58,7 @@ FROM toolchain as build_python
 
 # Install libffi, required for ctypes.
 RUN apt-get update -qq && apt-get -qq install file make
-RUN wget -q https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz && tar xf libffi-3.3.tar.gz && rm libffi-3.3.tar.gz
+ADD download-cache/libffi-3.3.tar.gz .
 ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
 RUN mkdir -p "$LIBFFI_INSTALL_DIR" && \
     cd libffi-3.3 && \
@@ -73,7 +74,7 @@ RUN cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$JNI_LIBS"
 
 # Download & patch Python
 RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip xz-utils
-RUN wget -q https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz && tar xf Python-3.7.6.tar.xz && rm Python-3.7.6.tar.xz
+ADD download-cache/Python-3.7.6.tar.xz .
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11

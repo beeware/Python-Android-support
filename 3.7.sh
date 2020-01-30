@@ -20,18 +20,19 @@ Exiting."
     fi
 }
 
-for dependency in docker python3 zip; do
+for dependency in curl cut docker grep python3 zip; do
     require "$dependency"
 done
 
 # Extract image ID from `docker build` output. Used by `build_one_abi`.
 IMAGE_NAME_TEMPFILE="$(mktemp)"
 function extract_image_name() {
-    tee >(tail -n1 | sed -e 's,Successfully built \([^ ]*\),\1,' > "$IMAGE_NAME_TEMPFILE")
+    tee >(tail -n1 | grep '^Successfully built ' | cut -d' ' -f3 > "$IMAGE_NAME_TEMPFILE")
 }
 
 function build_one_abi() {
     TARGET_ABI_SHORTNAME="$1"
+    PYTHON_VERSION="$2"
     # Using ANDROID_API_LEVEL=21 for two reasons:
     #
     # - >= 21 gives us a `localeconv` libc function (admittedly a
@@ -79,7 +80,7 @@ function build_one_abi() {
         ;;
     esac
 
-    docker build --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" -f 3.7.Dockerfile . | extract_image_name
+    docker build --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" -f "${PYTHON_VERSION}".Dockerfile . | extract_image_name
     local IMAGE_NAME
     IMAGE_NAME="$(cat $IMAGE_NAME_TEMPFILE)"
     if [ -z "$IMAGE_NAME" ] ; then
@@ -87,28 +88,76 @@ function build_one_abi() {
 	exit 1
     fi
 
-    # Using rsync -L so that libpython3.7.so.1.0.0 is copied into a file, not as a symlink.
-    docker run -v $PWD/output/3.7/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -aL  /opt/python-build/approot/. /mnt/.
-    docker run -v $PWD/output/3.7/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -aL /opt/python-build/built/python/include/python3.7m/pyconfig.h /mnt/
+    # Extract the build artifacts we need to create our zip file.
+    docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/approot/. /mnt/.
+    # Extract pyconfig.h for debugging ./configure strangeness.
+    docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_VERSION}"m/pyconfig.h /mnt/
+}
+
+function download() {
+    # Pass -O -J to curl to have it pick a filename automatically.
+    # Pass -L to follow redirects.
+    # Pass -sS for silent in the case of success, but to also show errors if they happen.
+    curl -O -J -L -sS "$1"
+}
+
+# Store a bash associative array of URLs we download, and their expected SHA256 sum.
+function download_urls() {
+    echo "Preparing downloads..."
+    declare -A URLS_AND_SHA256=(
+	["https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz"]="6dd0c9c8a740e6c19149e98034fba8e368fd9aa16ab417aa636854d40db1a161"
+	["https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip"]="8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
+	["https://www.openssl.org/source/openssl-1.1.1d.tar.gz"]="1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2"
+	["https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz"]="72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
+	["https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz"]="55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
+    )
+    local DOWNLOAD_CACHE="$PWD/download-cache"
+    local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
+    mkdir -p "$DOWNLOAD_CACHE"
+    for url in "${!URLS_AND_SHA256[@]}" ; do
+	expected_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
+	# Check existing file.
+	if [ -f "${DOWNLOAD_CACHE}/${expected_filename}" ] ; then
+	    continue
+	fi
+
+	# Download.
+	rm -rf download-cache.tmp && mkdir -p download-cache.tmp
+	cd download-cache.tmp && download "$url" && cd ..
+	local OK="no"
+	sha256sum "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "${URLS_AND_SHA256[$url]}" && OK="yes"
+	if [ "$OK" = "yes" ] ; then
+	    mv "${DOWNLOAD_CACHE_TMP}/${expected_filename}" "${DOWNLOAD_CACHE}/${expected_filename}"
+	    rmdir "${DOWNLOAD_CACHE_TMP}"
+	else
+	    echo "Checksum mismatch while downloading: $url"
+	    echo ""
+	    echo "Maybe your Internet connection got disconnected during the download. Please re-run the script."
+	    echo "Aborting."
+	    exit 1
+	fi
+    done
 }
 
 function main() {
+    echo 'Starting Docker builds.'
     # Clear the output directory.
     rm -rf ./output/3.7
     mkdir -p output/3.7
 
     for TARGET_ABI_SHORTNAME in x86 x86_64 armeabi-v7a arm64-v8a; do
-	build_one_abi "$TARGET_ABI_SHORTNAME"
+	build_one_abi "$TARGET_ABI_SHORTNAME" "3.7"
     done
 
     # When using Docker on Linux, the `rsync` command creates files owned by root.
     # Compute the user ID and group ID of this script on the non-Docker side, and ask
     # Docker to adjust permissions accordingly.
     USER_AND_GROUP="$(id -u):$(id -g)"
-    docker run -v $PWD/output/3.7/:/mnt/ --rm --entrypoint chown -R "$USER_AND_GROUP" .
+    docker run -v "${PWD}"/output/3.7/:/mnt/ --rm --entrypoint chown -R "$USER_AND_GROUP" .
 
     # Make a ZIP file.
     cd output/3.7 && zip -q -i 'app/*' -0 -r ../3.7.zip . && cd ../..
 }
 
+download_urls
 main
