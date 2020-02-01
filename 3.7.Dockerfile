@@ -125,6 +125,9 @@ RUN cd Python-3.7.6 && LDFLAGS="$(pkg-config --libs-only-L libffi) $(pkg-config 
 # Override ./configure results to futher force Python not to use some libc calls that trigger blocked syscalls.
 # TODO(someday): See if HAVE_INITGROUPS has another way to disable it.
 RUN cd Python-3.7.6 && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS|HAVE_INITGROUPS) 1,,' pyconfig.h
+# Adjust timemodule.c to perform data validation for mktime(). The libc call is supposed to do its own
+# validation, but on one Android 8.1 device, it doesn't. We leverage the existing AIX-related check in timemodule.c.
+RUN cd Python-3.7.6 && sed -i -E 's,#ifdef _AIX,#if defined(_AIX) || defined(__ANDROID__),' Modules/timemodule.c
 # Override posixmodule.c assumption that fork & exec exist & work.
 RUN cd Python-3.7.6 && sed -i -E 's,#define.*(HAVE_EXECV|HAVE_FORK).*1,,' Modules/posixmodule.c
 # Copy libbz2 into the SYSROOT_LIB. This is the IMHO the easiest way for setup.py to find it.
