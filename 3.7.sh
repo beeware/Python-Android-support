@@ -137,7 +137,7 @@ function download_urls() {
         cd download-cache.tmp && download "$url" && cd ..
         local OK="no"
         shasum -a 256 "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "$sha256" && OK="yes"
-       if [ "$OK" = "yes" ] ; then
+        if [ "$OK" = "yes" ] ; then
             mkdir -p "$DOWNLOAD_CACHE"
             mv "${DOWNLOAD_CACHE_TMP}/${expected_filename}" "${DOWNLOAD_CACHE}/${expected_filename}"
             rmdir "${DOWNLOAD_CACHE_TMP}"
