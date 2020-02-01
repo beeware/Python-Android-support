@@ -1,4 +1,6 @@
 #!/bin/bash
+# This script only uses bash features available in bash <= 3,
+# so that it works the same on macOS and GNU/Linux.
 
 # Set bash strict mode.
 set -eou pipefail
@@ -20,7 +22,10 @@ Exiting."
     fi
 }
 
-for dependency in curl cut docker grep python3 zip; do
+# We require `perl` because that is the the program that provides
+# shasum; we use shasum because it's available easily on macOS &
+# GNU/Linux.
+for dependency in curl cut docker grep perl python3 shasum zip; do
     require "$dependency"
 done
 
@@ -98,28 +103,32 @@ function build_one_abi() {
 function download() {
     # Pass -O -J to curl to have it pick a filename automatically.
     # Pass -L to follow redirects.
-    # Pass -sS for silent in the case of success, but to also show errors if they happen.
-    curl -O -J -L -sS "$1"
+    expected_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
+    echo "Downloading ${expected_filename}"
+    curl -O -J -L "$1"
 }
 
 # Store a bash associative array of URLs we download, and their expected SHA256 sum.
 function download_urls() {
     echo "Preparing downloads..."
-    declare -A URLS_AND_SHA256=(
-        ["https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz"]="6dd0c9c8a740e6c19149e98034fba8e368fd9aa16ab417aa636854d40db1a161"
-        ["https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip"]="8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
-        ["https://www.openssl.org/source/openssl-1.1.1d.tar.gz"]="1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2"
-        ["https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz"]="72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
-        ["https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz"]="55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
-        ["https://tukaani.org/xz/xz-5.2.4.tar.gz"]="b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
-	["https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"]="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+    URLS_AND_SHA256=(
+        "https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz=6dd0c9c8a740e6c19149e98034fba8e368fd9aa16ab417aa636854d40db1a161"
+        "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip=8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
+        "https://www.openssl.org/source/openssl-1.1.1d.tar.gz=1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2"
+        "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz=72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
+        "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz=55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
+        "https://tukaani.org/xz/xz-5.2.4.tar.gz=b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
+	"https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
     )
     local DOWNLOAD_CACHE="$PWD/download-cache"
     local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
-    for url in "${!URLS_AND_SHA256[@]}"; do
+    for url_and_sha256 in "${URLS_AND_SHA256[@]}" ; do
+        url="${url_and_sha256%%=*}"
+        sha256="${url_and_sha256##*=}"
         expected_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
         # Check existing file.
-        if [ -f "${DOWNLOAD_CACHE}/${expected_filename}" ]; then
+        if [ -f "${DOWNLOAD_CACHE}/${expected_filename}" ] ; then
+            echo "Using ${expected_filename} from download-cache/"
             continue
         fi
 
@@ -127,8 +136,8 @@ function download_urls() {
         rm -rf download-cache.tmp && mkdir -p download-cache.tmp
         cd download-cache.tmp && download "$url" && cd ..
         local OK="no"
-        sha256sum "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "${URLS_AND_SHA256[$url]}" && OK="yes"
-        if [ "$OK" = "yes" ]; then
+        shasum -a 256 "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "$sha256" && OK="yes"
+       if [ "$OK" = "yes" ] ; then
             mkdir -p "$DOWNLOAD_CACHE"
             mv "${DOWNLOAD_CACHE_TMP}/${expected_filename}" "${DOWNLOAD_CACHE}/${expected_filename}"
             rmdir "${DOWNLOAD_CACHE_TMP}"
