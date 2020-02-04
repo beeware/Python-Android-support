@@ -55,10 +55,6 @@ def fix(filename):
             # process exit codes are weird
             or " self.assertEqual(exitcode, self.exitcode)" in line
             or " os.spawnv(" in line
-            # Disable some test_posix tests
-            # TODO(someday): Remove these functions entirely.
-            or " posix.sched_getscheduler(" in line
-            or " posix.execve(" in line
             # Disable the group module's beliefs that all gr_name values are strings;
             # on Android, somehow, they're None.
             or "self.assertIsInstance(value.gr_name, str)" in line
