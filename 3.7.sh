@@ -167,7 +167,9 @@ function main() {
     rm -rf ./output/3.7
     mkdir -p output/3.7
 
-    for TARGET_ABI_SHORTNAME in x86 x86_64 armeabi-v7a arm64-v8a; do
+    # Allow TARGET_ABIs to be overridden by argv.
+    TARGET_ABIS="${@:-x86 x86_64 armeabi-v7a arm64-v8a}"
+    for TARGET_ABI_SHORTNAME in $TARGET_ABIS; do
         build_one_abi "$TARGET_ABI_SHORTNAME" "3.7"
     done
 
@@ -177,4 +179,4 @@ function main() {
 }
 
 download_urls
-main
+main "$@"
