@@ -6,7 +6,7 @@ LEADING_SPACES_RE = re.compile("^( +)")
 
 def fix(filename):
     # Don't apply these hacks to script_helper.py directly.
-    if filename.endswith('script_helper.py'):
+    if filename.endswith("script_helper.py"):
         return
 
     with open(filename) as fd:
@@ -60,6 +60,9 @@ def fix(filename):
             or "self.assertIsInstance(value.gr_name, str)" in line
             # Similar for pwd (password file) module
             or "self.assertIsInstance(e.pw_gecos, str)" in line
+            # test_socketserver.py has a test for signals & UNIX sockets interactions; this test hangs on Android.
+            # Skip for now.
+            or "test.support.get_attribute(signal, 'pthread_kill')" in line
         ):
             matching_lines.append(i)
 
