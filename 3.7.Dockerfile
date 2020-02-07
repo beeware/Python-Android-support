@@ -43,6 +43,18 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
     READELF=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-readelf \
     CFLAGS="-fPIC -Wall -O0 -g"
 
+# We build sqlite using a tarball from Ubuntu. We need to patch config.sub & config.guess so
+# autoconf can accept our weird TOOLCHAIN_TRIPLE value. It requires tcl8.6-dev and build-essential
+# because the compile process build and executes some commands on the host as part of the build process.
+# We hard-code avoid_version=yes into libtool so that libsqlite3.so is the SONAME.
+FROM toolchain as build_sqlite
+RUN apt-get update -qq && apt-get -qq install make autoconf autotools-dev tcl8.6-dev build-essential
+ADD download-cache/sqlite3_3.11.0.orig.tar.xz .
+RUN cd sqlite3-3.11.0 && autoreconf && cp -f /usr/share/misc/config.sub . && cp -f /usr/share/misc/config.guess .
+RUN cd sqlite3-3.11.0 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/sqlite"
+RUN cd sqlite3-3.11.0 && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
+RUN cd sqlite3-3.11.0 && make install
+
 # Install bzip2 & lzma libraries, for stdlib's _bzip2 and _lzma modules.
 FROM toolchain as build_xz
 RUN apt-get update -qq && apt-get -qq install make
@@ -92,11 +104,12 @@ COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/buil
 COPY --from=build_bz2 /opt/python-build/built/libbz2 /opt/python-build/built/libbz2
 COPY --from=build_xz /opt/python-build/built/xz /opt/python-build/built/xz
 COPY --from=build_libffi /opt/python-build/built/libffi /opt/python-build/built/libffi
+COPY --from=build_sqlite /opt/python-build/built/sqlite /opt/python-build/built/sqlite
 
 ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
 ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
 ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
-RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTALL_DIR"/lib/*.so /opt/python-build/built/libffi/lib/*.so /opt/python-build/built/xz/lib/*.so "$JNI_LIBS"
+RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTALL_DIR"/lib/*.so /opt/python-build/built/libffi/lib/*.so /opt/python-build/built/xz/lib/*.so /opt/python-build/built/sqlite/lib/*.so "$JNI_LIBS"
 ENV PKG_CONFIG_PATH="/opt/python-build/built/libffi/lib/pkgconfig:/opt/python-build/built/xz/lib/pkgconfig"
 
 # Download & patch Python
@@ -107,6 +120,8 @@ RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
 RUN sed -i -e s,'libraries or \[\],\["python3.7m"] + libraries if libraries else \["python3.7m"\],' Python-3.7.6/Lib/distutils/extension.py
 # Apply a hack to get the NDK library paths into the Python build. TODO(someday): Discuss with e.g. Kivy and see how to remove this.
 RUN sed -i -e "s# dirs = \[\]# dirs = \[os.environ.get('SYSROOT_INCLUDE'), os.environ.get('SYSROOT_LIB')\]#" Python-3.7.6/setup.py
+# Apply a hack to get the sqlite include path into setup.py. TODO(someday): Discuss with upstream Python if we can use pkg-config for sqlite.
+RUN sed -i -E 's,sqlite_inc_paths = [[][]],sqlite_inc_paths = ["/opt/python-build/built/sqlite/include"],' Python-3.7.6/setup.py
 # Apply a hack to make platform.py stop looking for a libc version.
 RUN sed -i -e "s#Linux#DisabledLinuxCheck#" Python-3.7.6/Lib/platform.py
 
