@@ -101,18 +101,16 @@ function build_one_abi() {
 }
 
 function download() {
-    # Pass -O -J to curl to have it pick a filename automatically.
     # Pass -L to follow redirects.
-    expected_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
-    echo "Downloading ${expected_filename}"
-    curl -O -J -L "$1"
+    echo "Downloading $2"
+    curl -L "$1" -o "$2"
 }
 
 # Store a bash associative array of URLs we download, and their expected SHA256 sum.
 function download_urls() {
     echo "Preparing downloads..."
     URLS_AND_SHA256=(
-        "https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-11.0.5%2B10/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz=6dd0c9c8a740e6c19149e98034fba8e368fd9aa16ab417aa636854d40db1a161"
+        "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz=f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
         "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip=8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
         "https://www.openssl.org/source/openssl-1.1.1d.tar.gz=1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2"
         "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz=72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
@@ -120,6 +118,7 @@ function download_urls() {
         "https://tukaani.org/xz/xz-5.2.4.tar.gz=b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
         "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
         "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz"="79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
+        "https://github.com/paulproteus/rubicon-java/archive/0.2020-02-11.1.tar.gz=fe9ae3ceb42a0e7d9e9d59311364d1882cb6bcda622ef3238fb2937f6651c124"
     )
     local DOWNLOAD_CACHE="$PWD/download-cache"
     local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
@@ -135,7 +134,7 @@ function download_urls() {
 
         # Download.
         rm -rf download-cache.tmp && mkdir -p download-cache.tmp
-        cd download-cache.tmp && download "$url" && cd ..
+        cd download-cache.tmp && download "$url" "$expected_filename" && cd ..
         local OK="no"
         shasum -a 256 "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "$sha256" && OK="yes"
         if [ "$OK" = "yes" ] ; then

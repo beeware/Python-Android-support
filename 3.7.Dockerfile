@@ -10,9 +10,9 @@ ADD download-cache/android-ndk-r20b-linux-x86_64.zip .
 RUN unzip -q android-ndk-r20b-linux-x86_64.zip && rm android-ndk-r20b-linux-x86_64.zip
 ENV NDK /opt/ndk/android-ndk-r20b
 WORKDIR /opt/jdk
-ADD download-cache/OpenJDK11U-jdk_x64_linux_hotspot_11.0.5_10.tar.gz .
-ENV JAVA_HOME /opt/jdk/jdk-11.0.5+10/
-ENV PATH "/opt/jdk/jdk-11.0.5+10/bin:${PATH}"
+ADD download-cache/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz .
+ENV JAVA_HOME /opt/jdk/jdk8u242-b08/
+ENV PATH "/opt/jdk/jdk8u242-b08/bin:${PATH}"
 
 # Store output here; the directory structure corresponds to our Android app template.
 ENV APPROOT /opt/python-build/approot
@@ -97,7 +97,7 @@ RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 
 # This build container builds Python, rubicon-java, and any dependencies.
 FROM toolchain as build_python
-RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config git zip
+RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config zip
 
 # Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
@@ -190,11 +190,12 @@ ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
 
 # Download & install rubicon-java.
-RUN git clone -b cross-compile https://github.com/paulproteus/rubicon-java.git && \
-    cd rubicon-java && \
+ARG RUBICON_JAVA_VERSION=0.2020-02-11.1
+ADD download-cache/${RUBICON_JAVA_VERSION}.tar.gz .
+RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
-RUN mv rubicon-java/dist/librubicon.so $JNI_LIBS
-RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java/dist/rubicon.jar $APPROOT/app/libs/
-RUN cd rubicon-java && zip -0 -q "$ASSETS_DIR"/rubicon.zip -r rubicon
+RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/librubicon.so $JNI_LIBS
+RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/rubicon.jar $APPROOT/app/libs/
+RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -0 -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 RUN apt-get update -qq && apt-get -qq install rsync
