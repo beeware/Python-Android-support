@@ -118,7 +118,7 @@ function download_urls() {
         "https://tukaani.org/xz/xz-5.2.4.tar.gz=b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
         "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"="ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
         "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz"="79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
-        "https://github.com/paulproteus/rubicon-java/archive/0.2020-02-11.1.tar.gz=fe9ae3ceb42a0e7d9e9d59311364d1882cb6bcda622ef3238fb2937f6651c124"
+        "https://github.com/paulproteus/rubicon-java/archive/0.2020-02-12.tar.gz=a05a00a974dec4e77186fb1a8f60caaf26f460cf82fdab7b4366933c89820c41"
     )
     local DOWNLOAD_CACHE="$PWD/download-cache"
     local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
