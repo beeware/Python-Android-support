@@ -97,7 +97,7 @@ RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 
 # This build container builds Python, rubicon-java, and any dependencies.
 FROM toolchain as build_python
-RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config zip
+RUN apt-get update -qq && apt-get -qq install python3.7 pkg-config zip quilt
 
 # Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
@@ -152,6 +152,9 @@ RUN cd Python-3.7.6 && make
 
 # Modify stdlib & test suite before `make install`.
 
+# Apply a hack to ssl.py so it looks at the Android certificate store.
+ADD 3.7.patches Python-3.7.6/patches
+RUN cd Python-3.7.6 && quilt push
 # Apply a hack to ctypes so that it loads libpython.so, even though this isn't Windows.
 RUN sed -i -e 's,pythonapi = PyDLL(None),pythonapi = PyDLL("libpython3.7m.so"),' Python-3.7.6/Lib/ctypes/__init__.py
 # Hack the test suite so that when it tries to remove files, if it can't remove them, the error passes silently.
