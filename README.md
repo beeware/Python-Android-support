@@ -143,6 +143,7 @@ Open a **new** terminal window/tab and run the following.
 $ export ANDROID_SDK_ROOT="${HOME}/android/sdk"
 $ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools"
 $ avdmanager --verbose create avd --name robotFriend --abi x86 --package 'system-images;android-29;default;x86' --device pixel
+$ echo 'disk.dataPartition.size=4096M' >> $HOME/.android/avd/robotFriend.avd/config.ini
 $ emulator @robotFriend
 ```
 
