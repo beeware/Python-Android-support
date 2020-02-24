@@ -132,7 +132,7 @@ $ mkdir -p ~/.android
 $ touch ~/.android/repositories.cfg
 $ sdkmanager --update
 $ sdkmanager --licenses
-$ sdkmanager ‘platforms;android-29’ ‘system-images;android-29;default;x86’ ‘emulator’ ‘platform-tools’
+$ sdkmanager 'platforms;android-29' 'system-images;android-29;default;x86' 'emulator' 'platform-tools'
 ```
 
 ### Configure an Android emulator
