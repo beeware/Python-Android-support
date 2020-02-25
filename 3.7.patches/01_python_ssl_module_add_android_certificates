@@ -20,3 +20,15 @@ Index: Python-3.7.6/Lib/ssl.py
          self.set_default_verify_paths()
  
      if hasattr(_SSLContext, 'minimum_version'):
+Index: Python-3.7.6/Lib/test/test_ssl.py
+===================================================================
+--- Python-3.7.6.orig/Lib/test/test_ssl.py
++++ Python-3.7.6/Lib/test/test_ssl.py
+@@ -1601,6 +1601,7 @@ class ContextTests(unittest.TestCase):
+     @unittest.skipIf(sys.platform == "win32", "not-Windows specific")
+     @unittest.skipIf(IS_LIBRESSL, "LibreSSL doesn't support env vars")
+     def test_load_default_certs_env(self):
++        raise unittest.SkipTest("Skipping this test for Python within an Android app")
+         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+         with support.EnvironmentVarGuard() as env:
+             env["SSL_CERT_DIR"] = CAPATH
