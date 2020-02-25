@@ -132,7 +132,7 @@ $ mkdir -p ~/.android
 $ touch ~/.android/repositories.cfg
 $ sdkmanager --update
 $ sdkmanager --licenses
-$ sdkmanager 'platforms;android-29' 'system-images;android-29;default;x86' 'emulator' 'platform-tools'
+$ sdkmanager 'platforms;android-28' 'system-images;android-28;default;x86' 'emulator' 'platform-tools'
 ```
 
 ### Configure an Android emulator
@@ -142,7 +142,7 @@ Open a **new** terminal window/tab and run the following.
 ```
 $ export ANDROID_SDK_ROOT="${HOME}/android/sdk"
 $ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools"
-$ avdmanager --verbose create avd --name robotFriend --abi x86 --package 'system-images;android-29;default;x86' --device pixel
+$ avdmanager --verbose create avd --name robotFriend --abi x86 --package 'system-images;android-28;default;x86' --device pixel
 $ echo 'disk.dataPartition.size=4096M' >> $HOME/.android/avd/robotFriend.avd/config.ini
 $ emulator @robotFriend
 ```
