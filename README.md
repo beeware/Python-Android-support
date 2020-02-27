@@ -127,7 +127,7 @@ See also: https://stackoverflow.com/a/55775566
 
 ```
 $ export ANDROID_SDK_ROOT="${PWD}"
-$ PATH=”$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools”
+$ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools"
 $ mkdir -p ~/.android
 $ touch ~/.android/repositories.cfg
 $ sdkmanager --update
