@@ -104,6 +104,19 @@ These URLs have existed since approximately 2017, and they have a
 built-in autoupdater, so I expect them to keep working for quite a few
 years longer.
 
+We need the `skins` folder from the JetBrains Android Studio IDE. Run the following
+commands to extract them.
+
+```
+$ git clone --depth 1 --no-checkout https://github.com/JetBrains/android ~/android/sdk/android-ide-git
+$ cd ~/android/sdk/android-ide-git
+$ git archive HEAD:artwork/resources/device-art-resources -o device-art-resources.zip
+$ mkdir ~/android/sdk/skins
+$ cd ~/android/sdk/skins
+$ unzip ~/android/sdk/android-ide-git/device-art-resources.zip
+$ rm -rf ~/android/sdk/android-ide-git
+```
+
 ### Download/configure an appropriate version of Java
 
 Ensure you have Java 8. Look at the output of this command.
