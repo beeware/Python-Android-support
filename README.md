@@ -174,15 +174,13 @@ $ cd MyApp # or whatever you said for project_name above
 $ unzip ~/Downloads/3.7.zip
 ```
 
-Finally, we need to create some sample Python code. Run the following
-commands to create an example app. Some of these commands are
-multi-line; please copy and run each command, not including the dollar
-sign, all the way up to the next dollar sign, not including the dollar
-sign.
+Finally, we need to create some sample Python code.
 
-```
-$ app_dir="$(ls -d app/src/main/assets/python/* )"
-$ cat > "$app_dir/__init__.py" <<EOF
+I'm assuming you called your app `my_app` in the earlier sections.
+Create a file called `app/src/main/assets/python/my_app/__init__.py`
+with the following content:
+
+```python
 from rubicon.java import JavaClass, JavaInterface
 
 IPythonApp = JavaInterface('org/beeware/android/IPythonApp')
@@ -196,8 +194,12 @@ class Application(IPythonApp):
 
     def onResume(self):
         print('called Python onResume()')
-EOF
-$ cat > "$app_dir/__main__.py" <<EOF
+```
+
+Create another file called `app/src/main/assets/my_app/__main__.py`
+with the following content.
+
+```python
 from . import Application
 from rubicon.java import JavaClass
 
@@ -205,7 +207,6 @@ activity_class = JavaClass('org/beeware/android/MainActivity')
 app = Application()
 activity_class.setPythonApp(app)
 print('Python app launched & stored in Android Activity class')
-EOF
 ```
 
 ### Run the app on the Android emulator
