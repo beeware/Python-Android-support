@@ -145,6 +145,10 @@ $ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDRO
 $ avdmanager --verbose create avd --name robotfriend --abi x86 --package 'system-images;android-28;default;x86' --device pixel
 $ echo 'disk.dataPartition.size=4096M' >> $HOME/.android/avd/robotfriend.avd/config.ini
 $ echo 'hw.keyboard=yes' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ echo 'skin.dynamic=yes' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ echo 'skin.name=pixel_3a' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ echo 'skin.path=skins/pixel_3a' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ echo 'showDeviceFrame=yes' >> $HOME/.android/avd/robotfriend.avd/config.ini
 $ emulator @robotfriend
 ```
 
