@@ -142,10 +142,10 @@ Open a **new** terminal window/tab and run the following.
 ```
 $ export ANDROID_SDK_ROOT="${HOME}/android/sdk"
 $ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools"
-$ avdmanager --verbose create avd --name robotFriend --abi x86 --package 'system-images;android-28;default;x86' --device pixel
-$ echo 'disk.dataPartition.size=4096M' >> $HOME/.android/avd/robotFriend.avd/config.ini
-$ echo 'hw.keyboard=yes' >> $HOME/.android/avd/robotFriend.avd/config.ini
-$ emulator @robotFriend
+$ avdmanager --verbose create avd --name robotfriend --abi x86 --package 'system-images;android-28;default;x86' --device pixel
+$ echo 'disk.dataPartition.size=4096M' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ echo 'hw.keyboard=yes' >> $HOME/.android/avd/robotfriend.avd/config.ini
+$ emulator @robotfriend
 ```
 
 The emulator command will open an Android emulator, and will block your terminal window.
