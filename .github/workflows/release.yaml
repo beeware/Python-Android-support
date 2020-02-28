@@ -1,0 +1,12 @@
+# Run this Action on creating a new tag.
+on:
+  push:
+    tags:
+    - '*'
+jobs:
+  hello_world:
+    runs_on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Say Hello
+      run: echo hello world
