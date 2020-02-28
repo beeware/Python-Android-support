@@ -167,6 +167,12 @@ $ emulator @robotfriend
 
 The emulator command will open an Android emulator, and will block your terminal window.
 
+Note: If you find your emulator lacks Internet access, and you are OK using a third-party DNS server, you can run this:
+
+```
+$ emulator @robotFriend -dns-server 1.1.1.1,8.8.8.8
+```
+
 ### Generate a Python-based Android app with cookiecutter
 
 In your original terminal, run the following commands.
