@@ -2,11 +2,31 @@
 on:
   push:
     tags:
-    - '*'
+    - 'v*'
 jobs:
-  hello_world:
+  build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: Say Hello
-      run: echo hello world
+    - uses: actions/checkout@v2
+    - name: Build project (dummy)
+      run: |
+        zip output.zip README.md
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: true
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./output.zip
+        asset_name: public-artifact-name.zip
+        asset_content_type: application/zip
