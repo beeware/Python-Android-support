@@ -163,6 +163,7 @@ function main() {
     echo 'Starting Docker builds.'
 
     # Clear the output directory.
+    mkdir -p output
     fix_permissions
     rm -rf ./output/3.7
     mkdir -p output/3.7
