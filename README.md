@@ -131,8 +131,10 @@ offering "More Info" and "OK," click "OK."
 On macOS, if you don’t have Java, or the version is not Java 8, run
 these commands:
 
+```
 $ brew tap adoptopenjdk/openjdk
 $ brew cask install adoptopenjdk8
+```
 
 See also: https://stackoverflow.com/a/55775566
 
