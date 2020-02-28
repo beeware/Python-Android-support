@@ -193,7 +193,7 @@ ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
 
 # Download & install rubicon-java.
-ARG RUBICON_JAVA_VERSION=0.2020-02-12.2
+ARG RUBICON_JAVA_VERSION=0.2020-02-27.0
 ADD download-cache/${RUBICON_JAVA_VERSION}.tar.gz .
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
