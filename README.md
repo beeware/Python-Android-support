@@ -141,7 +141,7 @@ See also: https://stackoverflow.com/a/55775566
 ### Configure the Android SDK
 
 ```
-$ export ANDROID_SDK_ROOT="${PWD}"
+$ export ANDROID_SDK_ROOT="${HOME}/android/sdk"
 $ PATH="$PATH:${ANDROID_SDK_ROOT}/tools/bin:${ANDROID_SDK_ROOT}/emulator:${ANDROID_SDK_ROOT}/platform-tools"
 $ mkdir -p ~/.android
 $ touch ~/.android/repositories.cfg
