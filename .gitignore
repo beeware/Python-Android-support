@@ -1,4 +1,6 @@
 *~
-output
-download-cache
+build
+dist
+downloads
+downloads.tmp
 .vscode

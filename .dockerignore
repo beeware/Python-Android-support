@@ -1,2 +1,4 @@
-output
+build
+dist
 .git
+.github

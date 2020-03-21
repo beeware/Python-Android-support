@@ -6,11 +6,11 @@ RUN apt-get update -qq && apt-get -qq install unzip
 
 # Install toolchains: Android NDK & Java JDK.
 WORKDIR /opt/ndk
-ADD download-cache/android-ndk-r20b-linux-x86_64.zip .
+ADD downloads/android-ndk-r20b-linux-x86_64.zip .
 RUN unzip -q android-ndk-r20b-linux-x86_64.zip && rm android-ndk-r20b-linux-x86_64.zip
 ENV NDK /opt/ndk/android-ndk-r20b
 WORKDIR /opt/jdk
-ADD download-cache/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz .
+ADD downloads/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz .
 ENV JAVA_HOME /opt/jdk/jdk8u242-b08/
 ENV PATH "/opt/jdk/jdk8u242-b08/bin:${PATH}"
 
@@ -49,7 +49,7 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
 # We hard-code avoid_version=yes into libtool so that libsqlite3.so is the SONAME.
 FROM toolchain as build_sqlite
 RUN apt-get update -qq && apt-get -qq install make autoconf autotools-dev tcl8.6-dev build-essential
-ADD download-cache/sqlite3_3.11.0.orig.tar.xz .
+ADD downloads/sqlite3_3.11.0.orig.tar.xz .
 RUN cd sqlite3-3.11.0 && autoreconf && cp -f /usr/share/misc/config.sub . && cp -f /usr/share/misc/config.guess .
 RUN cd sqlite3-3.11.0 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/sqlite"
 RUN cd sqlite3-3.11.0 && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
@@ -58,7 +58,7 @@ RUN cd sqlite3-3.11.0 && make install
 # Install bzip2 & lzma libraries, for stdlib's _bzip2 and _lzma modules.
 FROM toolchain as build_xz
 RUN apt-get update -qq && apt-get -qq install make
-ADD download-cache/xz-5.2.4.tar.gz .
+ADD downloads/xz-5.2.4.tar.gz .
 ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
 RUN mkdir -p "$LIBXZ_INSTALL_DIR"
 RUN cd xz-5.2.4 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBXZ_INSTALL_DIR"
@@ -67,7 +67,7 @@ RUN cd xz-5.2.4 && make install
 FROM toolchain as build_bz2
 RUN apt-get update -qq && apt-get -qq install make
 ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
-ADD download-cache/bzip2-1.0.8.tar.gz .
+ADD downloads/bzip2-1.0.8.tar.gz .
 RUN mkdir -p "$LIBBZ2_INSTALL_DIR" && \
     cd bzip2-1.0.8 && \
     sed -i -e 's,[.]1[.]0.8,,' -e 's,[.]1[.]0,,' -e 's,ln -s,#ln -s,' -e 's,rm -f libbz2.so,#rm -f libbz2.so,' -e 's,^CC=,#CC=,' Makefile-libbz2_so
@@ -80,7 +80,7 @@ RUN cp bzip2-1.0.8/bzlib.h "${LIBBZ2_INSTALL_DIR}/include"
 # libffi is required by ctypes
 FROM toolchain as build_libffi
 RUN apt-get update -qq && apt-get -qq install file make
-ADD download-cache/libffi-3.3.tar.gz .
+ADD downloads/libffi-3.3.tar.gz .
 ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
 RUN mkdir -p "$LIBFFI_INSTALL_DIR"
 RUN cd libffi-3.3 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR"
@@ -89,7 +89,7 @@ RUN cd libffi-3.3 && make install
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
-ADD download-cache/openssl-1.1.1d.tar.gz .
+ADD downloads/openssl-1.1.1d.tar.gz .
 ARG OPENSSL_BUILD_TARGET
 RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
 RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
@@ -113,7 +113,7 @@ RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTA
 ENV PKG_CONFIG_PATH="/opt/python-build/built/libffi/lib/pkgconfig:/opt/python-build/built/xz/lib/pkgconfig"
 
 # Download & patch Python
-ADD download-cache/Python-3.7.6.tar.xz .
+ADD downloads/Python-3.7.6.tar.xz .
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' Python-3.7.6/configure
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
@@ -194,7 +194,7 @@ RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR
 
 # Download & install rubicon-java.
 ARG RUBICON_JAVA_VERSION=0.2020-02-27.0
-ADD download-cache/${RUBICON_JAVA_VERSION}.tar.gz .
+ADD downloads/${RUBICON_JAVA_VERSION}.tar.gz .
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
 RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/librubicon.so $JNI_LIBS

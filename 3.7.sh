@@ -2,6 +2,8 @@
 # This script only uses bash features available in bash <= 3,
 # so that it works the same on macOS and GNU/Linux.
 
+BUILD_NUMBER=0
+
 # Set bash strict mode.
 set -eou pipefail
 
@@ -94,9 +96,9 @@ function build_one_abi() {
     fi
 
     # Extract the build artifacts we need to create our zip file.
-    docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/approot/. /mnt/.
+    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/approot/. /mnt/.
     # Extract pyconfig.h for debugging ./configure strangeness.
-    docker run -v "${PWD}"/output/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_VERSION}"m/pyconfig.h /mnt/
+    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$IMAGE_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_VERSION}"m/pyconfig.h /mnt/
     fix_permissions
 }
 
@@ -120,21 +122,21 @@ function download_urls() {
         "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz"="79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
         "https://github.com/paulproteus/rubicon-java/archive/0.2020-02-27.0.tar.gz=b698c1f5fd3f8d825ed88e1a782f1aaa58f6d27404edc43fdb7dd117ab4c8f28"
     )
-    local DOWNLOAD_CACHE="$PWD/download-cache"
-    local DOWNLOAD_CACHE_TMP="$PWD/download-cache.tmp"
+    local DOWNLOAD_CACHE="$PWD/downloads"
+    local DOWNLOAD_CACHE_TMP="$PWD/downloads.tmp"
     for url_and_sha256 in "${URLS_AND_SHA256[@]}" ; do
         url="${url_and_sha256%%=*}"
         sha256="${url_and_sha256##*=}"
         expected_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
         # Check existing file.
         if [ -f "${DOWNLOAD_CACHE}/${expected_filename}" ] ; then
-            echo "Using ${expected_filename} from download-cache/"
+            echo "Using ${expected_filename} from downloads/"
             continue
         fi
 
         # Download.
-        rm -rf download-cache.tmp && mkdir -p download-cache.tmp
-        cd download-cache.tmp && download "$url" "$expected_filename" && cd ..
+        rm -rf downloads.tmp && mkdir -p downloads.tmp
+        cd downloads.tmp && download "$url" "$expected_filename" && cd ..
         local OK="no"
         shasum -a 256 "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "$sha256" && OK="yes"
         if [ "$OK" = "yes" ] ; then
@@ -156,17 +158,18 @@ fix_permissions() {
     # When using Docker on Linux, the `rsync` command creates files owned by root.
     # Compute the user ID and group ID of this script on the non-Docker side, and ask
     # Docker to adjust permissions accordingly.
-    docker run -v "${PWD}":/mnt/ --rm --entrypoint chown ubuntu:18.04 -R "$USER_AND_GROUP" /mnt/output/
+    docker run -v "${PWD}":/mnt/ --rm --entrypoint chown ubuntu:18.04 -R "$USER_AND_GROUP" /mnt/build/
 }
 
 function main() {
     echo 'Starting Docker builds.'
 
-    # Clear the output directory.
-    mkdir -p output
+    # Clear the build directory.
+    mkdir -p build
+    mkdir -p dist
     fix_permissions
-    rm -rf ./output/3.7
-    mkdir -p output/3.7
+    rm -rf ./build/3.7
+    mkdir -p build/3.7
 
     # Allow TARGET_ABIs to be overridden by argv.
     TARGET_ABIS="${@:-x86 x86_64 armeabi-v7a arm64-v8a}"
@@ -176,7 +179,7 @@ function main() {
 
     # Make a ZIP file.
     fix_permissions
-    cd output/3.7 && zip -q -i 'app/*' -0 -r ../3.7.zip . && cd ../..
+    cd build/3.7 && zip -q -i 'app/*' -0 -r ../../dist/Python-3.7-Android-support.b${BUILD_NUMBER}.zip . && cd ../..
 }
 
 download_urls
