@@ -1,23 +1,3 @@
-This contains scripts for building Python on Android. It allows you
-to generate a Python support ZIP file, which is a file you an unpack
-over an Android app to get Python support in that Android app.
-
-Table of contents:
-
-- Generating a Python support ZIP file
-
-- Maintaining these scripts
-
-- Creating a sample app for Android
-
-## Generating a Python support ZIP file
-
-If you have `docker` installed, you can `git clone` this repository
-and run `./3.7.sh`. This will run for about 45 minutes, then create a
-Python support ZIP file at `output/3.7.zip`.
-
-You can run e.g. `3.7.sh x86` to rebuild the Python support code for
-one or more Android ABIs. This allows faster iteration.
 
 ## Maintaining these scripts
 
@@ -71,7 +51,7 @@ accommodate this goal! You can find an app to run the Python standard
 library test suite in
 [Python-Android-sample-apps](https://github.com/paulproteus/Python-Android-sample-apps).
 
-## Creating a sample app for Android
+# Creating a sample app for Android
 
 In these steps, you will:
 
@@ -86,7 +66,7 @@ This will require approximately 5GB of disk space and downloads. It
 will require about 30 minutes of time. I have tested these instructions
 on macOS and Ubuntu 18.04.
 
-### Downloading the Android SDK
+## Downloading the Android SDK
 
 On macOS, run the following commands.
 
@@ -117,7 +97,7 @@ $ unzip ~/android/sdk/android-ide-git/device-art-resources.zip
 $ rm -rf ~/android/sdk/android-ide-git
 ```
 
-### Download/configure an appropriate version of Java
+## Download/configure an appropriate version of Java
 
 Ensure you have Java 8. Look at the output of this command.
 
@@ -138,7 +118,7 @@ $ brew cask install adoptopenjdk8
 
 See also: https://stackoverflow.com/a/55775566
 
-### Configure the Android SDK
+## Configure the Android SDK
 
 ```
 $ export ANDROID_SDK_ROOT="${HOME}/android/sdk"
@@ -150,7 +130,7 @@ $ sdkmanager --licenses
 $ sdkmanager 'platforms;android-28' 'system-images;android-28;default;x86' 'emulator' 'platform-tools'
 ```
 
-### Configure an Android emulator
+## Configure an Android emulator
 
 Open a **new** terminal window/tab and run the following.
 
@@ -175,15 +155,15 @@ Note: If you find your emulator lacks Internet access, and you are OK using a th
 $ emulator @robotFriend -dns-server 1.1.1.1,8.8.8.8
 ```
 
-### Generate a Python-based Android app with cookiecutter
+## Generate a Python-based Android app with cookiecutter
 
 In your original terminal, run the following commands.
 
 ```
 $ python3 -m pip install --user cookiecutter
-$ mkdir -p ~/projects/beeware-sample-app
-$ cd ~/projects/beeware-sample-app
-$ python3 -m cookiecutter https://github.com/paulproteus/cookiecutter-beeware-android
+$ mkdir -p ~/projects/sample-app
+$ cd ~/projects/sample-app
+$ python3 -m cookiecutter https://github.com/beeware/briefcase-android-gradle-template
 ```
 
 Now, in a web browser, visit this URL:
