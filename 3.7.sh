@@ -185,7 +185,7 @@ function main() {
 
     # Make a ZIP file.
     fix_permissions
-    cd build/3.7 && zip -q -i 'app/*' -0 -r ../../dist/Python-3.7-Android-support${BUILD_TAG}.zip . && cd ../..
+    cd build/3.7/app && zip -q -i '*' -r ../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip . && cd ../../..
 }
 
 download_urls
