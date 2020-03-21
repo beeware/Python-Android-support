@@ -2,8 +2,6 @@
 # This script only uses bash features available in bash <= 3,
 # so that it works the same on macOS and GNU/Linux.
 
-BUILD_NUMBER=0
-
 # Set bash strict mode.
 set -eou pipefail
 
@@ -164,6 +162,14 @@ fix_permissions() {
 function main() {
     echo 'Starting Docker builds.'
 
+    if [ -z "${BUILD_NUMBER:-}" ]; then
+        BUILD_TAG=""
+        echo "Building untagged build"
+    else
+        BUILD_TAG=".b${BUILD_NUMBER}"
+        echo "Building b${BUILD_NUMBER}"
+    fi
+
     # Clear the build directory.
     mkdir -p build
     mkdir -p dist
@@ -179,7 +185,7 @@ function main() {
 
     # Make a ZIP file.
     fix_permissions
-    cd build/3.7 && zip -q -i 'app/*' -0 -r ../../dist/Python-3.7-Android-support.b${BUILD_NUMBER}.zip . && cd ../..
+    cd build/3.7 && zip -q -i 'app/*' -0 -r ../../dist/Python-3.7-Android-support${BUILD_TAG}.zip . && cd ../..
 }
 
 download_urls

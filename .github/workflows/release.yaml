@@ -8,8 +8,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - run: |
+        version="${TAG_NAME$$-*}"
+        build="${TAG_NAME#*-}"
+        echo "PY_VERSION=$version"
+        echo "BUILD_NUMBER=$build"
+        echo "::set-env name=PY_VERSION::$version"
+        echo "::set-env name=BUILD_NUMBER::$build"
+      env:
+        TAG_NAME: ${{ github.ref }}
     - name: Build project
-      run: bash -x 3.7.sh
+      run: bash -x ${{ env.PY_VERSION }}.sh
+      env:
+        BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -18,14 +29,14 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: true
+        draft: true
+        prerelease: false
     - name: Upload Release Asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./dist/Python-${{ github.ref }}-android-support.${{ github.ref }}.zip
-        asset_name: Python-${{ github.ref }}-android-support.${{ github.ref }}.zip
+        asset_path: ./dist/Python-${{ env.PY_VERSION }}-Android-support.${{ env.BUILD_NUMBER }}.zip
+        asset_name: Python-${{ env.PY_VERSION }}-Android-support.${{ env.BUILD_NUMBER }}.zip
         asset_content_type: application/zip
