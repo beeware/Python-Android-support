@@ -189,8 +189,6 @@ RUN cd Python-3.7.6 && rm Lib/test/test_wsgiref.py
 # Install Python.
 RUN cd Python-3.7.6 && make install
 RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython3.7m.so "$JNI_LIBS"
-ENV ASSETS_DIR $APPROOT/app/src/main/assets/
-RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -0 -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
 
 # Download & install rubicon-java.
 ARG RUBICON_JAVA_VERSION=0.2020-02-27.0
@@ -199,6 +197,11 @@ RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
 RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/rubicon.jar $APPROOT/app/libs/
-RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -0 -q "$ASSETS_DIR"/rubicon.zip -r rubicon
+
+# Create output artifacts.
+ENV ASSETS_DIR $APPROOT/app/src/main/assets/
+ARG COMPRESS_LEVEL
+RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
+RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 RUN apt-get update -qq && apt-get -qq install rsync

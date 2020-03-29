@@ -38,6 +38,7 @@ function extract_image_name() {
 function build_one_abi() {
     TARGET_ABI_SHORTNAME="$1"
     PYTHON_VERSION="$2"
+    COMPRESS_LEVEL="$3"
     # Using ANDROID_API_LEVEL=21 for two reasons:
     #
     # - >= 21 gives us a `localeconv` libc function (admittedly a
@@ -85,7 +86,7 @@ function build_one_abi() {
         ;;
     esac
 
-    docker build --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" -f "${PYTHON_VERSION}".Dockerfile . | extract_image_name
+    docker build --build-arg COMPRESS_LEVEL="${COMPRESS_LEVEL}" --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" -f "${PYTHON_VERSION}".Dockerfile . | extract_image_name
     local IMAGE_NAME
     IMAGE_NAME="$(cat $IMAGE_NAME_TEMPFILE)"
     if [ -z "$IMAGE_NAME" ]; then
@@ -177,15 +178,20 @@ function main() {
     rm -rf ./build/3.7
     mkdir -p build/3.7
 
+    # Allow COMPRESS_LEVEL to be overridden by environment variable.
+    COMPRESS_LEVEL="${COMPRESS_LEVEL:-8}"
+
     # Allow TARGET_ABIs to be overridden by argv.
     TARGET_ABIS="${@:-x86 x86_64 armeabi-v7a arm64-v8a}"
     for TARGET_ABI_SHORTNAME in $TARGET_ABIS; do
-        build_one_abi "$TARGET_ABI_SHORTNAME" "3.7"
+        build_one_abi "$TARGET_ABI_SHORTNAME" "3.7" "$COMPRESS_LEVEL"
     done
 
     # Make a ZIP file.
     fix_permissions
-    cd build/3.7/app && zip -q -i '*' -r ../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip . && cd ../../..
+    pushd build/3.7/app > /dev/null
+    zip -r -"${COMPRESS_LEVEL}" "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip" .
+    popd
 }
 
 download_urls
