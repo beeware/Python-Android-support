@@ -1,26 +1,33 @@
-# Run this Action on creating a new tag.
+# Run this Action on creating a new tag matching "<version>-b<build>"
+# e.g., 3.7-b1
+name: Build support package
 on:
   push:
     tags:
     - '*-b*'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: |
-        version="${TAG_NAME$$-*}"
-        build="${TAG_NAME#*-}"
-        echo "PY_VERSION=$version"
-        echo "BUILD_NUMBER=$build"
-        echo "::set-env name=PY_VERSION::$version"
-        echo "::set-env name=BUILD_NUMBER::$build"
+    - name: Set build variables
       env:
         TAG_NAME: ${{ github.ref }}
+      run: |
+        export TAG=$(basename $TAG_NAME)
+        echo "TAG=${TAG}"
+        export TAG_VERSION="${TAG%-*}"
+        export TAG_BUILD="${TAG#*-}"
+        echo "PY_VERSION=${TAG_VERSION}"
+        echo "BUILD_NUMBER=${TAG_BUILD}"
+        echo "::set-env name=TAG::${TAG}"
+        echo "::set-env name=PY_VERSION::${TAG_VERSION}"
+        echo "::set-env name=BUILD_NUMBER::${TAG_BUILD}"
     - name: Build project
-      run: bash -x ${{ env.PY_VERSION }}.sh
       env:
         BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+      run: bash -x ${{ env.PY_VERSION }}.sh
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
@@ -31,7 +38,7 @@ jobs:
         release_name: Release ${{ github.ref }}
         draft: true
         prerelease: false
-    - name: Upload Release Asset
+    - name: Upload Release Asset to Github
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
