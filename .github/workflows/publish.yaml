@@ -34,5 +34,5 @@ jobs:
         python -m pip install -U pip
         python -m pip install -U setuptools
         python -m pip install awscli
-        curl -o artefact.zip -L https://github.com/freakboy3742/ci-test/releases/download/${{ env.TAG }}/Python-${{ env.PY_VERSION }}-Android-support.${{ env.BUILD_NUMBER }}.zip
+        curl -o artefact.zip -L https://github.com/beeware/Python-Android-support/releases/download/${{ env.TAG }}/Python-${{ env.PY_VERSION }}-Android-support.${{ env.BUILD_NUMBER }}.zip
         aws s3 cp artefact.zip s3://briefcase-support/python/${{ env.PY_VERSION }}/android/Python-${{ env.PY_VERSION }}-Android-support.${{ env.BUILD_NUMBER }}.zip
