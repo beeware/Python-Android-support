@@ -113,7 +113,7 @@ function download_urls() {
     URLS_AND_SHA256=(
         "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz=f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
         "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip=8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
-        "https://www.openssl.org/source/openssl-1.1.1d.tar.gz=1e3a91bc1f9dfce01af26026f856e064eab4c8ee0a8f457b5ae30b40b8b711f2"
+        "https://www.openssl.org/source/openssl-1.1.1f.tar.gz=186c6bfe6ecfba7a5b48c47f8a1673d0f3b0e5ba2e25602dd23b629975da3f35"
         "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz=72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
         "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz=55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
         "https://tukaani.org/xz/xz-5.2.4.tar.gz=b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"

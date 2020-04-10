@@ -89,11 +89,11 @@ RUN cd libffi-3.3 && make install
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
-ADD downloads/openssl-1.1.1d.tar.gz .
+ADD downloads/openssl-1.1.1f.tar.gz .
 ARG OPENSSL_BUILD_TARGET
-RUN cd openssl-1.1.1d && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
-RUN cd openssl-1.1.1d && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
-RUN cd openssl-1.1.1d && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN cd openssl-1.1.1f && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
+RUN cd openssl-1.1.1f && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN cd openssl-1.1.1f && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 
 # This build container builds Python, rubicon-java, and any dependencies.
 FROM toolchain as build_python
