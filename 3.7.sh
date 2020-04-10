@@ -167,8 +167,8 @@ function main() {
         BUILD_TAG=""
         echo "Building untagged build"
     else
-        BUILD_TAG=".b${BUILD_NUMBER}"
-        echo "Building b${BUILD_NUMBER}"
+        BUILD_TAG=".${BUILD_NUMBER}"
+        echo "Building ${BUILD_NUMBER}"
     fi
 
     # Clear the build directory.
