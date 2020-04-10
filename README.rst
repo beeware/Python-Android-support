@@ -1,7 +1,7 @@
 Python Android Support
 ======================
 
-**This is the development version of the repository. It builds a packaged version of Python 3.7.6**.
+**This branch builds a packaged version of Python 3.7.6**.
 Other Python versions are available by cloning other branches of the main
 repository.
 
