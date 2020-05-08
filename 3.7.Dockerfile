@@ -191,12 +191,12 @@ RUN cd Python-3.7.6 && make install
 RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython3.7m.so "$JNI_LIBS"
 
 # Download & install rubicon-java.
-ARG RUBICON_JAVA_VERSION=0.2020-02-27.0
-ADD downloads/${RUBICON_JAVA_VERSION}.tar.gz .
+ARG RUBICON_JAVA_VERSION=0.2.0
+ADD downloads/v${RUBICON_JAVA_VERSION}.tar.gz .
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
-RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/librubicon.so $JNI_LIBS
-RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-${RUBICON_JAVA_VERSION}/dist/rubicon.jar $APPROOT/app/libs/
+RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/build/librubicon.so $JNI_LIBS
+RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-${RUBICON_JAVA_VERSION}/build/rubicon.jar $APPROOT/app/libs/
 
 # Create output artifacts.
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
