@@ -1,0 +1,165 @@
+From da34cb8d8665037c2aca9586071652dc96f0b975 Mon Sep 17 00:00:00 2001
+From: Asheesh Laroia <asheesh@asheesh.org>
+Date: Wed, 20 May 2020 11:13:49 -0700
+Subject: [PATCH] backport
+
+---
+ Lib/compileall.py                   |  6 ++++++
+ Lib/concurrent/futures/process.py   |  8 ++++++++
+ Lib/test/test_compileall.py         | 12 ++++++++++--
+ Lib/test/test_concurrent_futures.py | 19 ++++++++++++++++---
+ 4 files changed, 40 insertions(+), 5 deletions(-)
+
+diff --git a/Lib/compileall.py b/Lib/compileall.py
+index aa65c6b904..2104bb6724 100644
+--- a/Lib/compileall.py
++++ b/Lib/compileall.py
+@@ -71,12 +71,18 @@ def compile_dir(dir, maxlevels=10, ddir=None, force=False, rx=None,
+         if workers < 0:
+             raise ValueError('workers must be greater or equal to 0')
+         elif workers != 1:
++            # Check if this is a system where ProcessPoolExecutor can function.
++            from concurrent.futures.process import _check_system_limits
+             try:
+                 # Only import when needed, as low resource platforms may
+                 # fail to import it
+                 from concurrent.futures import ProcessPoolExecutor
+             except ImportError:
++                _check_system_limits()
++            except NotImplementedError:
+                 workers = 1
++            else:
++                from concurrent.futures import ProcessPoolExecutor
+     files = _walk_dir(dir, quiet=quiet, maxlevels=maxlevels,
+                       ddir=ddir)
+     success = True
+diff --git a/Lib/concurrent/futures/process.py b/Lib/concurrent/futures/process.py
+index 9106552c5d..348e63da69 100644
+--- a/Lib/concurrent/futures/process.py
++++ b/Lib/concurrent/futures/process.py
+@@ -456,6 +456,14 @@ def _check_system_limits():
+         if _system_limited:
+             raise NotImplementedError(_system_limited)
+     _system_limits_checked = True
++    try:
++        import multiprocessing.synchronize
++    except ImportError:
++        _system_limited = (
++            "This Python build lacks multiprocessing.synchronize, usually due "
++            "to named semaphores being unavailable on this platform."
++        )
++        raise NotImplementedError(_system_limited)
+     try:
+         nsems_max = os.sysconf("SC_SEM_NSEMS_MAX")
+     except (AttributeError, ValueError):
+diff --git a/Lib/test/test_compileall.py b/Lib/test/test_compileall.py
+index 2e2552303f..8a8ad3ab35 100644
+--- a/Lib/test/test_compileall.py
++++ b/Lib/test/test_compileall.py
+@@ -13,10 +13,14 @@ import unittest
+ import io
+ 
+ from unittest import mock, skipUnless
++from concurrent.futures import ProcessPoolExecutor
+ try:
+-    from concurrent.futures import ProcessPoolExecutor
++    # compileall relies on ProcessPoolExecutor if ProcessPoolExecutor exists
++    # and it can function.
++    from concurrent.futures.process import _check_system_limits
++    _check_system_limits()
+     _have_multiprocessing = True
+-except ImportError:
++except NotImplementedError:
+     _have_multiprocessing = False
+ 
+ from test import support
+@@ -167,6 +171,7 @@ class CompileallTestsBase:
+         self.assertRegex(line, r'Listing ([^WindowsPath|PosixPath].*)')
+         self.assertTrue(os.path.isfile(self.bc_path))
+ 
++    @skipUnless(_have_multiprocessing, "requires multiprocessing")
+     @mock.patch('concurrent.futures.ProcessPoolExecutor')
+     def test_compile_pool_called(self, pool_mock):
+         compileall.compile_dir(self.directory, quiet=True, workers=5)
+@@ -177,11 +182,13 @@ class CompileallTestsBase:
+                                     "workers must be greater or equal to 0"):
+             compileall.compile_dir(self.directory, workers=-1)
+ 
++    @skipUnless(_have_multiprocessing, "requires multiprocessing")
+     @mock.patch('concurrent.futures.ProcessPoolExecutor')
+     def test_compile_workers_cpu_count(self, pool_mock):
+         compileall.compile_dir(self.directory, quiet=True, workers=0)
+         self.assertEqual(pool_mock.call_args[1]['max_workers'], None)
+ 
++    @skipUnless(_have_multiprocessing, "requires multiprocessing")
+     @mock.patch('concurrent.futures.ProcessPoolExecutor')
+     @mock.patch('compileall.compile_file')
+     def test_compile_one_worker(self, compile_file_mock, pool_mock):
+@@ -189,6 +196,7 @@ class CompileallTestsBase:
+         self.assertFalse(pool_mock.called)
+         self.assertTrue(compile_file_mock.called)
+ 
++    @skipUnless(_have_multiprocessing, "requires multiprocessing")
+     @mock.patch('concurrent.futures.ProcessPoolExecutor', new=None)
+     @mock.patch('compileall.compile_file')
+     def test_compile_missing_multiprocessing(self, compile_file_mock):
+diff --git a/Lib/test/test_concurrent_futures.py b/Lib/test/test_concurrent_futures.py
+index ad68909161..6d8b3ccd87 100644
+--- a/Lib/test/test_concurrent_futures.py
++++ b/Lib/test/test_concurrent_futures.py
+@@ -2,8 +2,6 @@ import test.support
+ 
+ # Skip tests if _multiprocessing wasn't built.
+ test.support.import_module('_multiprocessing')
+-# Skip tests if sem_open implementation is broken.
+-test.support.import_module('multiprocessing.synchronize')
+ 
+ from test.support.script_helper import assert_python_ok
+ 
+@@ -24,7 +22,7 @@ from concurrent import futures
+ from concurrent.futures._base import (
+     PENDING, RUNNING, CANCELLED, CANCELLED_AND_NOTIFIED, FINISHED, Future,
+     BrokenExecutor)
+-from concurrent.futures.process import BrokenProcessPool
++from concurrent.futures.process import BrokenProcessPool, _check_system_limits
+ from multiprocessing import get_context
+ 
+ 
+@@ -156,6 +154,10 @@ class ProcessPoolForkMixin(ExecutorMixin):
+     ctx = "fork"
+ 
+     def get_context(self):
++        try:
++            _check_system_limits()
++        except NotImplementedError:
++            self.skipTest("ProcessPoolExecutor unavailable on this system")
+         if sys.platform == "win32":
+             self.skipTest("require unix system")
+         return super().get_context()
+@@ -165,12 +167,23 @@ class ProcessPoolSpawnMixin(ExecutorMixin):
+     executor_type = futures.ProcessPoolExecutor
+     ctx = "spawn"
+ 
++    def get_context(self):
++        try:
++            _check_system_limits()
++        except NotImplementedError:
++            self.skipTest("ProcessPoolExecutor unavailable on this system")
++        return super().get_context()
++
+ 
+ class ProcessPoolForkserverMixin(ExecutorMixin):
+     executor_type = futures.ProcessPoolExecutor
+     ctx = "forkserver"
+ 
+     def get_context(self):
++        try:
++            _check_system_limits()
++        except NotImplementedError:
++            self.skipTest("ProcessPoolExecutor unavailable on this system")
+         if sys.platform == "win32":
+             self.skipTest("require unix system")
+         return super().get_context()
+-- 
+2.24.2 (Apple Git-127)
+
