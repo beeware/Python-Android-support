@@ -5,15 +5,16 @@
 #
 # Examples:
 #
-# lib/*/libssl*
-# lib/*/libcrypto*
+# libs/*/libssl*
+# libs/*/libcrypto*
 #
-# These lines would remove OpenSSL. The first asterisk is needed
+# These lines would remove OpenSSL. The libs/ directory contains
+# JNI libraries for the Android app. The first asterisk is needed
 # to match the pattern in all Android ABIs. The second asterisk
 # is present for convenience, to avoid having to specify the full
 # OpenSSL library name.
 #
-# lib/*/*xz*
+# libs/*/*xz*
 #
 # This line would remove the "xz" compression library. This might
 # be appropriate if you don't use that compression format in your
