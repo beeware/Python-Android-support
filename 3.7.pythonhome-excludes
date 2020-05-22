@@ -1,0 +1,17 @@
+# This file is used by `zip -i@this_file` in `Dockerfile` on
+# each architecture to filter the Python standard library we
+# distribute.
+lib/python*/config-*
+lib/python*/ctypes/test/*
+lib/python*/curses/*
+lib/python*/distutils/tests/*
+lib/python*/ensurepip/*
+lib/python*/idlelib/*
+lib/python*/lib2to3/tests/*
+lib/python*/site-packages/*
+lib/python*/sqlite3/test/*
+lib/python*/test/*
+lib/python*/tkinter/*
+lib/python*/turtle.py
+lib/python*/turtledemo/*
+lib/python*/wsgiref/*
