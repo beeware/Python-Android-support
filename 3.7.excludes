@@ -1,0 +1,20 @@
+# You can add patterns to this file to remove them
+# from the Python-Android-support.zip file. Note that
+# if you are removing files from the Python standard library,
+# you need to use the 3.7.pythohome-excludes file.
+#
+# Examples:
+#
+# lib/*/libssl*
+# lib/*/libcrypto*
+#
+# These lines would remove OpenSSL. The first asterisk is needed
+# to match the pattern in all Android ABIs. The second asterisk
+# is present for convenience, to avoid having to specify the full
+# OpenSSL library name.
+#
+# lib/*/*xz*
+#
+# This line would remove the "xz" compression library. This might
+# be appropriate if you don't use that compression format in your
+# code.
