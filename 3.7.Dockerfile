@@ -198,10 +198,12 @@ RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
 RUN mv rubicon-java-${RUBICON_JAVA_VERSION}/build/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-${RUBICON_JAVA_VERSION}/build/rubicon.jar $APPROOT/app/libs/
 
-# Create output artifacts.
+# Create rubicon.zip and pythonhome.zip for this CPU architecture, filtering
+# pythonhome.zip using pythonhome-excludes to remove the CPython test suite, etc.
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 ARG COMPRESS_LEVEL
-RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
+ADD 3.7.pythonhome-excludes /opt/python-build/
+RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -x@/opt/python-build/3.7.pythonhome-excludes -$COMPRESS_LEVEL -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 RUN apt-get update -qq && apt-get -qq install rsync

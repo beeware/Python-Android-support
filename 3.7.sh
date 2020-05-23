@@ -190,7 +190,7 @@ function main() {
     # Make a ZIP file.
     fix_permissions
     pushd build/3.7/app > /dev/null
-    zip -r -"${COMPRESS_LEVEL}" "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip" .
+    zip -x@../../../3.7.excludes -r -"${COMPRESS_LEVEL}" "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip" .
     popd
 }
 

@@ -1,0 +1,51 @@
+# This is a list of Python standard library path patterns
+# we exclude from the Python-Android-support ZIP file. It is 
+# used by `zip -i@this_file` in `Dockerfile` to filter the pythonhome.zip
+# we generate for each Android ABI.
+#
+# Remove standard library test suites.
+lib/python*/ctypes/test/*
+lib/python*/distutils/tests/*
+lib/python*/lib2to3/tests/*
+lib/python*/sqlite3/test/*
+lib/python*/test/*
+# Remove compiled test and example modules.
+lib/python*/lib-dynload/_test*.so
+lib/python*/lib-dynload/_ctypes_test*.so
+lib/python*/lib-dynload/xxlimited*.so
+lib/python*/lib-dynload/_xxtestfuzz.so
+# Remove wsgiref web app module; it's unusual that mobile apps would
+# start a web app server with it.
+lib/python*/wsgiref/*
+# Remove command-line curses toolkit.
+lib/python*/curses/*
+# Remove config-* directory, which is used for compiling C extension modules.
+lib/python*/config-*
+# Remove ensurepip. If user code needs pip, it can add it to 
+lib/python*/ensurepip/*
+# Remove Tcl/Tk GUI code. We don't build against Tcl/Tk at the moment, so this
+# will not work.
+lib/python*/idlelib/*
+lib/python*/tkinter/*
+lib/python*/turtle.py
+lib/python*/turtledemo/*
+# Remove lib/pkgconfig files. These are used for compiling C extension modules.
+lib/pkgconfig/*
+# Remove site-packages directory. The Android template unpacks user code and
+# dependencies to a different path.
+lib/python*/site-packages/*
+# Remove include/ directory, only useful for compiling C extension modules.
+include/*
+# Remove bin/ directory, which contains executables like 2to3
+# (not useful in the app) and python3, which could possibly be useful,
+# except Python-Android-support doesn't support launching Python as a
+# subprocess very well at the moment.
+bin/*
+# Remove share/ directory, which contains user documentation (man pages).
+share/*
+# Remove libpython.so from the stdlib package. We rely on the libpython.so
+# in the JNI libs directory instead.
+lib/libpython3*.so
+# Remove pyc files. These take up space, but since most stdlib modules are
+# never imported by user code, they mostly have no value.
+*/*.pyc
