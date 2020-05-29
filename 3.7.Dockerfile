@@ -204,6 +204,10 @@ ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 ARG COMPRESS_LEVEL
 ADD 3.7.pythonhome-excludes /opt/python-build/
 RUN mkdir -p "$ASSETS_DIR" && cd "$PYTHON_INSTALL_DIR" && zip -x@/opt/python-build/3.7.pythonhome-excludes -$COMPRESS_LEVEL -q "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
+# Rename the ZIP file to include its sha256sum. This enables fast, accurate
+# cache validation/invalidation when the ZIP file reaches the Android device.
+RUN sha256sum "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip | cut -d' ' -f1 > /tmp/sum
+RUN mv "$ASSETS_DIR"/pythonhome.${TARGET_ABI_SHORTNAME}.zip "$ASSETS_DIR"/pythonhome.`cat /tmp/sum`.${TARGET_ABI_SHORTNAME}.zip
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 RUN apt-get update -qq && apt-get -qq install rsync
