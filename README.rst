@@ -26,3 +26,7 @@ will then be backported into the supported Python releases. The dev branch will
 track the most recent supported version of Python (currently, Python 3.7).
 
 See the individual branches for usage instructions.
+
+To detect that Python is running on Android via this build, check for the
+existence of ``sys.getandroidapilevel``;
+`see further discussion. <https://github.com/beeware/Python-Android-support/issues/8>`__
