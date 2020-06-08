@@ -187,10 +187,12 @@ function main() {
         build_one_abi "$TARGET_ABI_SHORTNAME" "3.7" "$COMPRESS_LEVEL"
     done
 
-    # Make a ZIP file.
+    # Make a ZIP file, writing it first to `.tmp` so that we atomically clobber an
+    # existing ZIP file rather than attempt to merge the new contents with old.
     fix_permissions
     pushd build/3.7/app > /dev/null
-    zip -x@../../../3.7.excludes -r -"${COMPRESS_LEVEL}" "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip" .
+    zip -x@../../../3.7.excludes -r -"${COMPRESS_LEVEL}" "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip".tmp .
+    mv "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip".tmp "../../../dist/Python-3.7-Android-support${BUILD_TAG}.zip"
     popd
 }
 
