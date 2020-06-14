@@ -190,7 +190,9 @@ RUN cd Python-3.7.6 && rm Lib/test/test_wsgiref.py
 RUN cd Python-3.7.6 && make install
 RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython3.7m.so "$JNI_LIBS"
 
-# Download & install rubicon-java.
+# Download & install rubicon-java's Java & C parts. The *.py files in rubicon-java are
+# incorporated into apps via app dependency management and are ABI-independent since
+# they access the C library via `ctypes`.
 ARG RUBICON_JAVA_VERSION=0.2.0
 ADD downloads/v${RUBICON_JAVA_VERSION}.tar.gz .
 RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && \
@@ -208,6 +210,5 @@ RUN mkdir -p "$ASSETS_DIR/stdlib" && cd "$PYTHON_INSTALL_DIR" && zip -x@/opt/pyt
 # cache validation/invalidation when the ZIP file reaches the Android device.
 RUN sha256sum "$ASSETS_DIR"/stdlib/pythonhome.${TARGET_ABI_SHORTNAME}.zip | cut -d' ' -f1 > /tmp/sum
 RUN mv "$ASSETS_DIR"/stdlib/pythonhome.${TARGET_ABI_SHORTNAME}.zip "$ASSETS_DIR"/stdlib/pythonhome.`cat /tmp/sum`.${TARGET_ABI_SHORTNAME}.zip
-RUN cd rubicon-java-${RUBICON_JAVA_VERSION} && zip -$COMPRESS_LEVEL -q "$ASSETS_DIR"/rubicon.zip -r rubicon
 
 RUN apt-get update -qq && apt-get -qq install rsync
