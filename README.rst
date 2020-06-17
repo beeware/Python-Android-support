@@ -41,4 +41,35 @@ will be in the `dist` directory.
 You can then follow `these same instructions <./USAGE.md>`__ for building
 an Android application.
 
+Testing
+-------
+
+When you do a local build, you can use the ``support_package = ...`` configuration
+option in a briefcase app's ``pyproject.toml`` to point the app at your local
+support library.
+
+You can run ``python3 test_all_extensions_built.py dist/Python-*-Android-support.zip``
+to quickly validate that the expected compiled extension modules are available for a
+given build.
+
+To run the CPython test suite within an app context, you can add this code to a
+briefcase app::
+
+    import os, sys
+    sys.executable = sys.prefix + "/bin/" + sorted([x for x in os.listdir(sys.prefix + "/bin/") if x.startswith("python3.")])[0]
+    os.chmod(sys.executable, 0o755)
+    from test.libregrtest import main
+    result = None
+    try:
+        result = main([], use_resources=['network'])
+    except SystemExit as e:
+        # Do not let SystemExit bubble up further; if the app exits with a nonzero
+        # status code, Android restarts it, which is rather annoying. :)
+        print('Would exit with statuscode', e.code)
+    else:
+        print("Tests finished with result", result)
+
+Note that you must modify the ``pythonhome`` excludes list for this to work properly,
+which will make the support package larger.
+
 .. _can be downloaded: https://briefcase-support.org/python?platform=android&version=3.7
