@@ -213,13 +213,16 @@ RUN cd rubicon-java-src && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
 RUN mv rubicon-java-src/build/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-src/build/rubicon.jar $APPROOT/app/libs/
+
+ENV ASSETS_DIR $APPROOT/app/src/main/assets/
+RUN mkdir -p "${ASSETS_DIR}"
+
 # Create an empty ZIP file at rubicon.zip. We can delete this later, once no versions of the template
 # depend on rubicon.zip's existence.
 RUN echo -n '\x50\x4b\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' > "$ASSETS_DIR"/rubicon.zip
 
 # Create pythonhome.zip for this CPU architecture, filtering pythonhome.zip using pythonhome-excludes
 # to remove the CPython test suite, etc.
-ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 ARG COMPRESS_LEVEL
 ADD excludes/all/pythonhome-excludes /opt/python-build/
 RUN mkdir -p "$ASSETS_DIR/stdlib" && cd "$PYTHON_INSTALL_DIR" && zip -x@/opt/python-build/pythonhome-excludes -$COMPRESS_LEVEL -q "$ASSETS_DIR"/stdlib/pythonhome.${TARGET_ABI_SHORTNAME}.zip -r .
