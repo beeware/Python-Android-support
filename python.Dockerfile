@@ -197,8 +197,6 @@ RUN cd python-src && rm Lib/test/test_httpservers.py
 RUN cd python-src && rm Lib/test/test_xmlrpc.py
 # TODO(someday): restore wsgiref tests & fix them; right now they hang forever.
 RUN cd python-src && rm Lib/test/test_wsgiref.py
-RUN cd python-src && sed -i -e s,'except _Error','except ZeroDivisionError', Lib/runpy.py
-RUN cd python-src && sed -i -e s,'return _run_code,print(code); return _run_code,' Lib/runpy.py
 
 # Install Python.
 RUN cd python-src && make install
