@@ -156,7 +156,7 @@ function main() {
     local DEFAULT_COMPRESS_LEVEL="8"
     local COMPRESS_LEVEL="$DEFAULT_COMPRESS_LEVEL"
     local BUILD_NUMBER=""
-    while getopts ":v:a:t:z:" opt; do
+    while getopts ":v:a:n:z:" opt; do
         case "${opt}" in
             v) # process Python version
                 VERSIONS="$OPTARG"
@@ -164,7 +164,7 @@ function main() {
             a) # process Android ABIs
                 TARGET_ABIS="$OPTARG"
                 ;;
-            t) # set build version name, used in BUILD_TAG
+            n) # set build version name, used in BUILD_TAG
                 BUILD_NUMBER="${OPTARG}"
                 ;;
             z) # set compression level, passed to zip
