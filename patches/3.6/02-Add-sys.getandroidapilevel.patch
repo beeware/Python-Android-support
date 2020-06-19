@@ -1,0 +1,113 @@
+From 3bfe7c6ae7e4f488b6e660a3c9080e3c8a5d9821 Mon Sep 17 00:00:00 2001
+From: Victor Stinner <victor.stinner@gmail.com>
+Date: Fri, 2 Dec 2016 01:13:46 +0100
+Subject: [PATCH] Add sys.getandroidapilevel()
+
+Issue #28740: Add sys.getandroidapilevel(): return the build time
+API version of Android as an integer.
+
+Function only available on Android.
+---
+ Doc/library/sys.rst          |  9 +++++++++
+ Lib/test/support/__init__.py |  9 +++++++--
+ Lib/test/test_sys.py         |  7 +++++++
+ Python/sysmodule.c           | 18 ++++++++++++++++++
+ 4 files changed, 41 insertions(+), 2 deletions(-)
+
+diff --git a/Doc/library/sys.rst b/Doc/library/sys.rst
+index 91984667bf..53ad99bed5 100644
+--- a/Doc/library/sys.rst
++++ b/Doc/library/sys.rst
+@@ -407,6 +407,15 @@ always available.
+    .. versionadded:: 3.4
+ 
+ 
++.. function:: getandroidapilevel()
++
++   Return the build time API version of Android as an integer.
++
++   Availability: Android.
++
++   .. versionadded:: 3.7
++
++
+ .. function:: getcheckinterval()
+ 
+    Return the interpreter's "check interval"; see :func:`setcheckinterval`.
+diff --git a/Lib/test/support/__init__.py b/Lib/test/support/__init__.py
+index 66c0fed841..5d602bc179 100644
+--- a/Lib/test/support/__init__.py
++++ b/Lib/test/support/__init__.py
+@@ -801,8 +801,13 @@ requires_lzma = unittest.skipUnless(lzma, 'requires lzma')
+ 
+ is_jython = sys.platform.startswith('java')
+ 
+-_ANDROID_API_LEVEL = sysconfig.get_config_var('ANDROID_API_LEVEL')
+-is_android = (_ANDROID_API_LEVEL is not None and _ANDROID_API_LEVEL > 0)
++try:
++    # constant used by requires_android_level()
++    _ANDROID_API_LEVEL = sys.getandroidapilevel()
++    is_android = True
++except AttributeError:
++    # sys.getandroidapilevel() is only available on Android
++    is_android = False
+ 
+ if sys.platform != 'win32':
+     unix_shell = '/system/bin/sh' if is_android else '/bin/sh'
+diff --git a/Lib/test/test_sys.py b/Lib/test/test_sys.py
+index 7866a5c005..2339f886a6 100644
+--- a/Lib/test/test_sys.py
++++ b/Lib/test/test_sys.py
+@@ -863,6 +863,13 @@ class SysModuleTest(unittest.TestCase):
+         check(-1<<1000, [traceback[-1]])
+         check(None, traceback)
+ 
++    @unittest.skipUnless(hasattr(sys, 'getandroidapilevel'),
++                         'need sys.getandroidapilevel()')
++    def test_getandroidapilevel(self):
++        level = sys.getandroidapilevel()
++        self.assertIsInstance(level, int)
++        self.assertGreater(level, 0)
++
+ 
+ @test.support.cpython_only
+ class SizeofTest(unittest.TestCase):
+diff --git a/Python/sysmodule.c b/Python/sysmodule.c
+index 7d1493cbe1..392983db4b 100644
+--- a/Python/sysmodule.c
++++ b/Python/sysmodule.c
+@@ -1350,6 +1350,20 @@ PyDoc_STRVAR(is_finalizing_doc,
+ Return True if Python is exiting.");
+ 
+ 
++#ifdef ANDROID_API_LEVEL
++PyDoc_STRVAR(getandroidapilevel_doc,
++"getandroidapilevel()\n\
++\n\
++Return the build time API version of Android as an integer.");
++
++static PyObject *
++sys_getandroidapilevel(PyObject *self)
++{
++    return PyLong_FromLong(ANDROID_API_LEVEL);
++}
++#endif   /* ANDROID_API_LEVEL */
++
++
+ static PyMethodDef sys_methods[] = {
+     /* Might as well keep this in alphabetic order */
+     {"callstats", (PyCFunction)PyEval_GetCallStats, METH_NOARGS,
+@@ -1434,6 +1448,10 @@ static PyMethodDef sys_methods[] = {
+      METH_VARARGS | METH_KEYWORDS, set_asyncgen_hooks_doc},
+     {"get_asyncgen_hooks", sys_get_asyncgen_hooks, METH_NOARGS,
+      get_asyncgen_hooks_doc},
++#ifdef ANDROID_API_LEVEL
++    {"getandroidapilevel", (PyCFunction)sys_getandroidapilevel, METH_NOARGS,
++     getandroidapilevel_doc},
++#endif
+     {NULL,              NULL}           /* sentinel */
+ };
+ 
+-- 
+2.27.0
+

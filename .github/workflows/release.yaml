@@ -26,9 +26,7 @@ jobs:
         echo "::set-env name=PY_VERSION::${TAG_VERSION}"
         echo "::set-env name=BUILD_NUMBER::${TAG_BUILD}"
     - name: Build project
-      env:
-        BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
-      run: bash -x ${{ env.PY_VERSION }}.sh
+      run: bash -x main.sh -v ${{ env.PY_VERSION }} -n ${{ env.BUILD_NUMBER }}
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
