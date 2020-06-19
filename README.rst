@@ -1,15 +1,12 @@
 Python Android Support
 ======================
 
-**This is the development version of the repository. It builds a packaged version of Python 3.7.6**.
-Other Python versions are available by cloning other branches of the main
-repository.
-
 This is a meta-package for building a version of CPython that can be embedded
-into an Android project.
+into an Android project. It supports Python versions 3.6, 3.7, and 3.8.
 
 It works by downloading, patching, and building CPython and selected pre-
-requisites, and packaging them as linkable dynamic libraries.
+requisites, packaging them as linkable dynamic libraries, and packaging
+that into a ZIP file. It builds binaries for all four major Android ABIs.
 
 Quickstart
 ----------
@@ -25,7 +22,7 @@ project. See `this documentation <./USAGE.md>`__ for more details on how to
 build an Android project using this support package.
 
 Alternatively, to build the frameworks on your own, download/clone this
-repository, and then in the root directory, and run `./3.7.sh` to build
+repository, and then in the root directory, and run ``./main.sh`` to build
 everything. You will need Docker installed; all other requirements will
 be downloaded as part of the installation script.
 
@@ -35,8 +32,8 @@ This should:
 2. Patch them as required for compatibility with the selected OS
 3. Build the packages.
 
-The build products will be in the `build` directory; the compiled artefacts
-will be in the `dist` directory.
+The build products will be in the ``build`` directory; the compiled artefacts
+will be in the ``dist`` directory.
 
 You can then follow `these same instructions <./USAGE.md>`__ for building
 an Android application.
