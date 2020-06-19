@@ -215,10 +215,6 @@ RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-src/build/rubicon.ja
 ENV ASSETS_DIR $APPROOT/app/src/main/assets/
 RUN mkdir -p "${ASSETS_DIR}"
 
-# Create an empty ZIP file at rubicon.zip. We can delete this later, once no versions of the template
-# depend on rubicon.zip's existence.
-RUN echo -n '\x50\x4b\x05\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' > "$ASSETS_DIR"/rubicon.zip
-
 # Create pythonhome.zip for this CPU architecture, filtering pythonhome.zip using pythonhome-excludes
 # to remove the CPython test suite, etc.
 ARG COMPRESS_LEVEL
