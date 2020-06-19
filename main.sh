@@ -105,34 +105,38 @@ function build_one_abi() {
     fix_permissions
 }
 
-# Download a file and verify its sha256sum.
-function download_verify_sha256() {
-    local url="$1"
-    local sha256="$2"
-    local filename_prefix="${3:-}"
-    local DOWNLOAD_CACHE="$PWD/downloads"
-    local DOWNLOAD_CACHE_TMP="$PWD/downloads.tmp"
-    local expected_filename="${filename_prefix}$(echo "$url" | tr '/' '\n' | tail -n1)"
+# Download a file into downloads/$name/$filename and verify its sha256sum.
+# If any files exist under downloads/$name, remove them. In the Dockerfile,
+# we refer to the tarball as downloads/$name/* , allowing the Dockerfile
+# to avoid redundantly stating the version number.
+function download() {
+    local name="$1"
+    local url="$2"
+    local sha256="$3"
+    local download_dir="${PWD}/downloads/$name"
+    local base_filename="$(echo "$url" | tr '/' '\n' | tail -n1)"
+    local full_filename="$download_dir/$base_filename"
+    local full_filename_tmp="${full_filename}.tmp"
 
     # Check existing file.
-    if [ -f "${DOWNLOAD_CACHE}/${expected_filename}" ] ; then
-        echo "Using ${expected_filename} from downloads/"
+    if [ -f "${full_filename}" ] ; then
+        echo "Using $name (${full_filename})"
         return
     fi
 
-    echo "Downloading $expected_filename"
-    rm -rf downloads.tmp && mkdir -p downloads.tmp
-    curl -L "$url" -o "downloads.tmp/$expected_filename"
+    echo "Downloading $name ($full_filename)"
+    rm -rf "$download_dir"
+    mkdir -p "$download_dir"
+    curl -L "$url" -o "$full_filename_tmp"
     local OK="no"
-    shasum -a 256 "${DOWNLOAD_CACHE_TMP}/${expected_filename}" | grep -q "$sha256" && OK="yes"
+    shasum -a 256 "${full_filename_tmp}" | grep -q "$sha256" && OK="yes"
     if [ "$OK" = "yes" ] ; then
-        mkdir -p "$DOWNLOAD_CACHE"
-        mv "${DOWNLOAD_CACHE_TMP}/${expected_filename}" "${DOWNLOAD_CACHE}/${expected_filename}"
-        rmdir "${DOWNLOAD_CACHE_TMP}"
+        mv "${full_filename_tmp}" "${full_filename}"
     else
-        echo "Checksum mismatch while downloading: $url"
+        echo "Checksum mismatch while downloading $name <$url>"
         echo ""
         echo "Maybe your Internet connection got disconnected during the download. Please re-run the script."
+        echo "Partial file remains in: ${full_filename_tmp}"
         echo "Aborting."
         exit 1
     fi
@@ -207,38 +211,26 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
 
     echo "Downloading compile-time dependencies."
 
-    local build_dependencies=(
-        "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz=f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
-        "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip=8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
-        "https://www.openssl.org/source/openssl-1.1.1f.tar.gz=186c6bfe6ecfba7a5b48c47f8a1673d0f3b0e5ba2e25602dd23b629975da3f35"
-        "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz=72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
-        "https://tukaani.org/xz/xz-5.2.4.tar.gz=b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
-        "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz=ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
-        "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz=79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
-    )
-    for build_dependency in "${build_dependencies[@]}" ; do
-        download_verify_sha256 ${build_dependency/=/ }
-    done
+    download jdk "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz" "f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
+    download ndk "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip" "8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
+    download openssl "https://www.openssl.org/source/openssl-1.1.1g.tar.gz" "ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46"
+    download libffi "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz" "72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
+    download xz "https://tukaani.org/xz/xz-5.2.4.tar.gz" "b512f3b726d3b37b6dc4c8570e137b9311e7552e8ccbab4d39d47ce5f4177145"
+    download bzip2 "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz" "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
+    download sqlite3 "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz" "79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
+    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.0.tar.gz" "b0d3d9ad4988c2d0e6995e2cbec085a5ef49b15e1be0d325b6141fb90fccccf7"
 
-    # Download rubicon-java source tarball with a rubicon-java-* filename prefix. This allows the
-    # Dockerfile to find it as rubicon-java-*.tar.gz . Other tarballs don't need this treatment
-    # because they have the project name in the filename.
-    download_verify_sha256 "https://github.com/beeware/rubicon-java/archive/v0.2.0.tar.gz" "b0d3d9ad4988c2d0e6995e2cbec085a5ef49b15e1be0d325b6141fb90fccccf7" "rubicon-java-"
-
-    echo "Downloading Python versions, as needed."
-    for version in ${VERSIONS//,/ } ; do
-        if [ "$version" = "3.7" ] ; then
-            download_verify_sha256 "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz" "55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
-        elif [ "$version" = "3.6" ] ; then
-            download_verify_sha256 "https://www.python.org/ftp/python/3.6.10/Python-3.6.10.tar.xz" "0a833c398ac8cd7c5538f7232d8531afef943c60495c504484f308dac3af40de"
-        else
-            echo "Unknown Python version: $version. Aborting."
-            exit 1
-        fi
-    done
+    echo "Downloading Python versions."
+    download "python-3.7" "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz" "55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
+    download "python-3.6" "https://www.python.org/ftp/python/3.6.10/Python-3.6.10.tar.xz" "0a833c398ac8cd7c5538f7232d8531afef943c60495c504484f308dac3af40de"
 
     echo 'Starting Docker builds.'
     for VERSION in ${VERSIONS//,/ } ; do
+        if [ "$VERSION" != "3.6" ] && [ "$VERSION" != "3.7" ] ) ; then
+            echo "Invalid Python version: $VERSION"
+            exit 1
+        fi
+
         # Clear the build directory.
         mkdir -p build
         mkdir -p dist
