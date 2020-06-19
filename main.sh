@@ -81,6 +81,12 @@ function build_one_abi() {
         ;;
     esac
 
+    local PYTHON_SOVERSION="${PYTHON_VERSION}"
+    if [ "$PYTHON_VERSION" = "3.7" ] || [ "$PYTHON_VERSION" = "3.6" ] ; then
+        # 3.6 and 3.7 use 3.6m/3.7m
+        PYTHON_SOVERSION="${PYTHON_VERSION}m"
+    fi
+
     # We use Docker to run the build. We rely on Docker's build cache to allow the
     # build to be speedy if nothing changed, approx 1-2 seconds for a no-op build.
     # The cache persists even if no Docker "tags" point to the image.
@@ -91,7 +97,7 @@ function build_one_abi() {
     # For debugging the Docker image, you can use the name python-android-support-local:latest.
     TAG_NAME="python-android-support-local:$(python3 -c 'import random; print(random.randint(0, 1e16))')"
     DOCKER_BUILDKIT=1 docker build --tag ${TAG_NAME} --tag python-android-support-local:latest \
-        --build-arg PYTHON_VERSION="${PYTHON_VERSION}" \
+        --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg PYTHON_SOVERSION="${PYTHON_SOVERSION}" \
         --build-arg COMPRESS_LEVEL="${COMPRESS_LEVEL}" --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" \
         --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" \
         --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" \
@@ -99,7 +105,7 @@ function build_one_abi() {
     # Extract the build artifacts we need to create our zip file.
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/approot/. /mnt/.
     # Extract pyconfig.h for debugging ./configure strangeness.
-    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_VERSION}"m/pyconfig.h /mnt/
+    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_SOVERSION}"/pyconfig.h /mnt/
     # Remove temporary local tag.
     docker rmi "$TAG_NAME" > /dev/null
     fix_permissions
@@ -153,7 +159,7 @@ fix_permissions() {
 function main() {
     # Interpret argv for settings; first, set defaults. For some settings, create
     # DEFAULT_* variables for inclusion into help output.
-    local DEFAULT_VERSIONS="3.6,3.7"
+    local DEFAULT_VERSIONS="3.6,3.7,3.8"
     local VERSIONS="$DEFAULT_VERSIONS"
     local DEFAULT_TARGET_ABIS="x86,x86_64,armeabi-v7a,arm64-v8a"
     local TARGET_ABIS="$DEFAULT_TARGET_ABIS"
@@ -221,12 +227,13 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
     download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.0.tar.gz" "b0d3d9ad4988c2d0e6995e2cbec085a5ef49b15e1be0d325b6141fb90fccccf7"
 
     echo "Downloading Python versions."
-    download "python-3.7" "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz" "55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
     download "python-3.6" "https://www.python.org/ftp/python/3.6.10/Python-3.6.10.tar.xz" "0a833c398ac8cd7c5538f7232d8531afef943c60495c504484f308dac3af40de"
+    download "python-3.7" "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz" "55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
+    download "python-3.8" "https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tar.xz" "dfab5ec723c218082fe3d5d7ae17ecbdebffa9a1aea4d64aa3a2ecdd2e795864"
 
     echo 'Starting Docker builds.'
     for VERSION in ${VERSIONS//,/ } ; do
-        if [ "$VERSION" != "3.6" ] && [ "$VERSION" != "3.7" ] ) ; then
+        if [ "$VERSION" != "3.6" ] && [ "$VERSION" != "3.7" ] && [ "$VERSION" != "3.8" ] ; then
             echo "Invalid Python version: $VERSION"
             exit 1
         fi

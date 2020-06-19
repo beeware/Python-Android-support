@@ -105,7 +105,7 @@ RUN cd openssl-src && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 # requires itself to be installed globally during a cross-compile, and Python 3.6 additionally
 # requires Python 2 to be installed at build time.
 FROM toolchain as build_python
-RUN apt-get update -qq && apt-get -qq install python python3.6 python3.7 pkg-config zip quilt
+RUN apt-get update -qq && apt-get -qq install python python3.6 python3.7 python3.8 pkg-config zip quilt
 
 # Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
@@ -126,8 +126,9 @@ ADD downloads/python-${PYTHON_VERSION}/* .
 RUN mv Python-* python-src
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' python-src/configure
+ARG PYTHON_SOVERSION
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
-RUN sed -i -e s,'libraries or \[\],\["pythonX.Ym"] + libraries if libraries else \["pythonX.Ym"\],' -e  "s,pythonX.Ym,python${PYTHON_VERSION}m,g" python-src/Lib/distutils/extension.py
+RUN sed -i -e s,'libraries or \[\],\["pythonPYTHON_SOVERSION"] + libraries if libraries else \["pythonPYTHON_SOVERSION"\],' -e  "s,pythonPYTHON_SOVERSION,python${PYTHON_SOVERSION},g" python-src/Lib/distutils/extension.py
 # Apply a hack to get the NDK library paths into the Python build. Python 3.6 (but not 3.7+) needs OpenSSL here as well.
 # TODO(someday): Discuss with e.g. Kivy and see how to remove this.
 RUN sed -i -e "s# dirs = \[\]# dirs = \[os.environ.get('SYSROOT_INCLUDE'), os.environ.get('SYSROOT_LIB'), os.environ.get('OPENSSL_INSTALL_DIR') + '/include', os.environ.get('OPENSSL_INSTALL_DIR') + '/lib' \]#" python-src/setup.py
@@ -138,7 +139,7 @@ RUN sed -i -e "s#Linux#DisabledLinuxCheck#" python-src/Lib/platform.py
 
 # Apply our patches to Python. See patches/3.*/* for details.
 ADD patches/${PYTHON_VERSION} python-src/patches
-RUN cd python-src && quilt push -a
+RUN cd python-src && if [ "$(wc -l < patches/series)" != "0" ] ; then quilt push -a; else echo "No patches." ; fi
 
 # Build Python, pre-configuring some values so it doesn't check if those exist.
 ENV SYSROOT_LIB=${TOOLCHAIN}/sysroot/usr/lib/${TOOLCHAIN_TRIPLE}/${ANDROID_API_LEVEL}/ \
@@ -174,7 +175,7 @@ RUN cd python-src && make
 # Modify stdlib & test suite before `make install`.
 
 # Apply a hack to ctypes so that it loads libpython.so, even though this isn't Windows.
-RUN sed -i -e 's,pythonapi = PyDLL(None),pythonapi = PyDLL("libpythonX.Ym.so"),'  -e "s,libpythonX.Ym,libpython${PYTHON_VERSION}m,g" python-src/Lib/ctypes/__init__.py
+RUN sed -i -e 's,pythonapi = PyDLL(None),pythonapi = PyDLL("libpythonPYTHON_SOVERSION.so"),'  -e "s,libpythonPYTHON_SOVERSION,libpython${PYTHON_SOVERSION},g" python-src/Lib/ctypes/__init__.py
 # Hack the test suite so that when it tries to remove files, if it can't remove them, the error passes silently.
 # To see if ths is still an issue, run `test_bdb`.
 RUN sed -i -e "s#NotADirectoryError#NotADirectoryError, OSError#" python-src/Lib/test/support/__init__.py
@@ -206,7 +207,7 @@ RUN cd python-src && rm Lib/test/test_wsgiref.py
 
 # Install Python.
 RUN cd python-src && make install
-RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython${PYTHON_VERSION}m.so "$JNI_LIBS"
+RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython${PYTHON_SOVERSION}.so "$JNI_LIBS"
 
 # Download & install rubicon-java's Java & C parts. The *.py files in rubicon-java are
 # incorporated into apps via app dependency management and are ABI-independent since
