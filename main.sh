@@ -226,7 +226,7 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
 
     echo 'Starting Docker builds.'
     for VERSION in ${VERSIONS//,/ } ; do
-        if [ "$VERSION" != "3.6" ] && [ "$VERSION" != "3.7" ] ) ; then
+        if [ "$VERSION" != "3.6" ] && [ "$VERSION" != "3.7" ] ; then
             echo "Invalid Python version: $VERSION"
             exit 1
         fi
