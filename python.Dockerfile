@@ -6,13 +6,14 @@ RUN apt-get update -qq && apt-get -qq install unzip rsync
 
 # Install toolchains: Android NDK & Java JDK.
 WORKDIR /opt/ndk
-ADD downloads/android-ndk-r20b-linux-x86_64.zip .
-RUN unzip -q android-ndk-r20b-linux-x86_64.zip && rm android-ndk-r20b-linux-x86_64.zip
-ENV NDK /opt/ndk/android-ndk-r20b
+ADD downloads/ndk/* .
+RUN unzip -q android-ndk-*-linux-x86_64.zip && rm android-ndk-*-linux-x86_64.zip && mv android-ndk-* android-ndk
+ENV NDK /opt/ndk/android-ndk
 WORKDIR /opt/jdk
-ADD downloads/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz .
-ENV JAVA_HOME /opt/jdk/jdk8u242-b08/
-ENV PATH "/opt/jdk/jdk8u242-b08/bin:${PATH}"
+ADD downloads/jdk/* .
+RUN mv jdk* jdk_home
+ENV JAVA_HOME /opt/jdk/jdk_home/
+ENV PATH "/opt/jdk/jdk_home/bin:${PATH}"
 
 # Store output here; the directory structure corresponds to our Android app template.
 ENV APPROOT /opt/python-build/approot
@@ -49,51 +50,56 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
 # We hard-code avoid_version=yes into libtool so that libsqlite3.so is the SONAME.
 FROM toolchain as build_sqlite
 RUN apt-get update -qq && apt-get -qq install make autoconf autotools-dev tcl8.6-dev build-essential
-ADD downloads/sqlite3_3.11.0.orig.tar.xz .
-RUN cd sqlite3-3.11.0 && autoreconf && cp -f /usr/share/misc/config.sub . && cp -f /usr/share/misc/config.guess .
-RUN cd sqlite3-3.11.0 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/sqlite"
-RUN cd sqlite3-3.11.0 && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
-RUN cd sqlite3-3.11.0 && make install
+ADD downloads/sqlite3/* .
+RUN mv sqlite3-* sqlite3-src
+RUN cd sqlite3-src && autoreconf && cp -f /usr/share/misc/config.sub . && cp -f /usr/share/misc/config.guess .
+RUN cd sqlite3-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/sqlite"
+RUN cd sqlite3-src && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
+RUN cd sqlite3-src && make install
 
 # Install bzip2 & lzma libraries, for stdlib's _bzip2 and _lzma modules.
 FROM toolchain as build_xz
 RUN apt-get update -qq && apt-get -qq install make
-ADD downloads/xz-5.2.4.tar.gz .
+ADD downloads/xz/* .
+RUN mv xz-* xz-src
 ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
 RUN mkdir -p "$LIBXZ_INSTALL_DIR"
-RUN cd xz-5.2.4 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBXZ_INSTALL_DIR"
-RUN cd xz-5.2.4 && make install
+RUN cd xz-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBXZ_INSTALL_DIR"
+RUN cd xz-src && make install
 
 FROM toolchain as build_bz2
 RUN apt-get update -qq && apt-get -qq install make
 ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
-ADD downloads/bzip2-1.0.8.tar.gz .
+ADD downloads/bzip2/* .
+RUN mv bzip2-* bzip2-src
 RUN mkdir -p "$LIBBZ2_INSTALL_DIR" && \
-    cd bzip2-1.0.8 && \
+    cd bzip2-src && \
     sed -i -e 's,[.]1[.]0.8,,' -e 's,[.]1[.]0,,' -e 's,ln -s,#ln -s,' -e 's,rm -f libbz2.so,#rm -f libbz2.so,' -e 's,^CC=,#CC=,' Makefile-libbz2_so
-RUN cd bzip2-1.0.8 && make -f Makefile-libbz2_so
+RUN cd bzip2-src && make -f Makefile-libbz2_so
 RUN mkdir -p "${LIBBZ2_INSTALL_DIR}/lib"
-RUN cp bzip2-1.0.8/libbz2.so "${LIBBZ2_INSTALL_DIR}/lib"
+RUN cp bzip2-src/libbz2.so "${LIBBZ2_INSTALL_DIR}/lib"
 RUN mkdir -p "${LIBBZ2_INSTALL_DIR}/include"
-RUN cp bzip2-1.0.8/bzlib.h "${LIBBZ2_INSTALL_DIR}/include"
+RUN cp bzip2-src/bzlib.h "${LIBBZ2_INSTALL_DIR}/include"
 
 # libffi is required by ctypes
 FROM toolchain as build_libffi
 RUN apt-get update -qq && apt-get -qq install file make
-ADD downloads/libffi-3.3.tar.gz .
+ADD downloads/libffi/* .
+RUN mv libffi-* libffi-src
 ENV LIBFFI_INSTALL_DIR="$BUILD_HOME/built/libffi"
 RUN mkdir -p "$LIBFFI_INSTALL_DIR"
-RUN cd libffi-3.3 && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR"
-RUN cd libffi-3.3 && make install
+RUN cd libffi-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$LIBFFI_INSTALL_DIR"
+RUN cd libffi-src && make install
 
 FROM toolchain as build_openssl
 # OpenSSL requires libfindlibs-libs-perl. make is nice, too.
 RUN apt-get update -qq && apt-get -qq install libfindbin-libs-perl make
-ADD downloads/openssl-1.1.1f.tar.gz .
+ADD downloads/openssl/* .
+RUN mv openssl-* openssl-src
 ARG OPENSSL_BUILD_TARGET
-RUN cd openssl-1.1.1f && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
-RUN cd openssl-1.1.1f && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
-RUN cd openssl-1.1.1f && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN cd openssl-src && ANDROID_NDK_HOME="$NDK" ./Configure ${OPENSSL_BUILD_TARGET} -D__ANDROID_API__="$ANDROID_API_LEVEL" --prefix="$BUILD_HOME/built/openssl" --openssldir="$BUILD_HOME/built/openssl"
+RUN cd openssl-src && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
+RUN cd openssl-src && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 
 # This build container builds Python, rubicon-java, and any dependencies. Each Python version
 # requires itself to be installed globally during a cross-compile, and Python 3.6 additionally
@@ -116,7 +122,7 @@ ENV PKG_CONFIG_PATH="/opt/python-build/built/libffi/lib/pkgconfig:/opt/python-bu
 
 # Download & patch Python. We assume that there is only one Python-${VERSION}.*.tar.xz file.
 ARG PYTHON_VERSION
-ADD downloads/Python-${PYTHON_VERSION}.*.tar.xz .
+ADD downloads/python-${PYTHON_VERSION}/* .
 RUN mv Python-* python-src
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' python-src/configure
@@ -205,7 +211,7 @@ RUN cp -a $PYTHON_INSTALL_DIR/lib/libpython${PYTHON_VERSION}m.so "$JNI_LIBS"
 # Download & install rubicon-java's Java & C parts. The *.py files in rubicon-java are
 # incorporated into apps via app dependency management and are ABI-independent since
 # they access the C library via `ctypes`.
-ADD downloads/rubicon-java-* .
+ADD downloads/rubicon-java/* .
 RUN mv rubicon-java-* rubicon-java-src
 RUN cd rubicon-java-src && \
     LDFLAGS='-landroid -llog' PYTHON_CONFIG=$PYTHON_INSTALL_DIR/bin/python3-config make
