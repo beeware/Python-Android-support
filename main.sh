@@ -104,8 +104,13 @@ function build_one_abi() {
         -f python.Dockerfile .
     # Extract the build artifacts we need to create our zip file.
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/approot/. /mnt/.
-    # Extract pyconfig.h for debugging ./configure strangeness.
-    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/python"${PYTHON_SOVERSION}"/pyconfig.h /mnt/
+    # Extract header files
+    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/app/include/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/ /mnt/
+
+    # Move pyconfig.h to a platform-specific name.
+    mv "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig.h "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig-${TARGET_ABI_SHORTNAME}.h
+    # Inject a platform-agnostic pyconfig.h wrapper.
+    cp "${PWD}/patches/all/pyconfig.h" "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/
     # Remove temporary local tag.
     docker rmi "$TAG_NAME" > /dev/null
     fix_permissions
