@@ -126,6 +126,12 @@ ADD downloads/python-${PYTHON_VERSION}/* .
 RUN mv Python-* python-src
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' python-src/configure
+# Modify Makefile.* so that libpython3.*.so gets a SONAME. This is required because
+# upstream's build system only sets the SONAME for libpython3.*.so.1.0 (which it sets
+# to libpython3.*.so.1.0, which doesn't work for us on Android because we need the
+# .so to end in .so). In the process, avoid calling `ln` to link the file to itself,
+# which will fail.
+RUN sed -i -e s,'test $(INSTSONAME) != $(LDLIBRARY)',true, -e s,'$(LN) -f $(INSTSONAME) $@;,,' python-src/Makefile.*
 ARG PYTHON_SOVERSION
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
 RUN sed -i -e s,'libraries or \[\],\["pythonPYTHON_SOVERSION"] + libraries if libraries else \["pythonPYTHON_SOVERSION"\],' -e  "s,pythonPYTHON_SOVERSION,python${PYTHON_SOVERSION},g" python-src/Lib/distutils/extension.py
