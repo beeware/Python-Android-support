@@ -126,6 +126,12 @@ ADD downloads/python-${PYTHON_VERSION}/* .
 RUN mv Python-* python-src
 # Modify ./configure so that, even though this is Linux, it does not append .1.0 to the .so file.
 RUN sed -i -e 's,INSTSONAME="$LDLIBRARY".$SOVERSION,,' python-src/configure
+# Modify Makefile.* so that libpython3.*.so gets a SONAME. This is required because
+# upstream's build system only sets the SONAME for libpython3.*.so.1.0 (which it sets
+# to libpython3.*.so.1.0, which doesn't work for us on Android because we need the
+# .so to end in .so). In the process, avoid calling `ln` to link the file to itself,
+# which will fail.
+RUN sed -i -e s,'test $(INSTSONAME) != $(LDLIBRARY)',true, -e s,'$(LN) -f $(INSTSONAME) $@;,,' python-src/Makefile.*
 ARG PYTHON_SOVERSION
 # Apply a C extensions linker hack; already fixed in Python 3.8+; see https://github.com/python/cpython/commit/254b309c801f82509597e3d7d4be56885ef94c11
 RUN sed -i -e s,'libraries or \[\],\["pythonPYTHON_SOVERSION"] + libraries if libraries else \["pythonPYTHON_SOVERSION"\],' -e  "s,pythonPYTHON_SOVERSION,python${PYTHON_SOVERSION},g" python-src/Lib/distutils/extension.py
@@ -158,7 +164,6 @@ RUN cd python-src && LDFLAGS="$(pkg-config --libs-only-L libffi) $(pkg-config --
     --prefix="$PYTHON_INSTALL_DIR" \
     ac_cv_func_setuid=no ac_cv_func_seteuid=no ac_cv_func_setegid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no ac_cv_header_termios_h=no ac_cv_func_sendfile=no ac_cv_header_spawn_h=no ac_cv_func_posix_spawn=no \
     ac_cv_func_setlocale=no ac_cv_working_tzset=no ac_cv_member_struct_tm_tm_zone=no ac_cv_func_sched_setscheduler=no
-RUN bash
 # Override ./configure results to futher force Python not to use some libc calls that trigger blocked syscalls.
 # TODO(someday): See if HAVE_INITGROUPS has another way to disable it.
 RUN cd python-src && sed -i -E 's,#define (HAVE_CHROOT|HAVE_SETGROUPS|HAVE_INITGROUPS) 1,,' pyconfig.h
