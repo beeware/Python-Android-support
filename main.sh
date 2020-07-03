@@ -107,13 +107,15 @@ function build_one_abi() {
     # Extract header files
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/app/include/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/ /mnt/
 
+    # Docker creates files as root; reown as the local user
+    fix_permissions
+
     # Move pyconfig.h to a platform-specific name.
     mv "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig.h "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig-${TARGET_ABI_SHORTNAME}.h
     # Inject a platform-agnostic pyconfig.h wrapper.
     cp "${PWD}/patches/all/pyconfig.h" "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/
     # Remove temporary local tag.
     docker rmi "$TAG_NAME" > /dev/null
-    fix_permissions
 }
 
 # Download a file into downloads/$name/$filename and verify its sha256sum.
