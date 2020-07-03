@@ -234,7 +234,7 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
     download xz "https://tukaani.org/xz/xz-5.2.5.tar.gz" "f6f4910fd033078738bd82bfba4f49219d03b17eb0794eb91efbae419f4aba10"
     download bzip2 "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz" "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
     download sqlite3 "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz" "79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
-    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.1.tar.gz" "a1d1c6edccbd75631a0c3cc129239e10f7b6d8f221a393b96fbdc83293636f8b"
+    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.2.tar.gz" "0f6a66cede0e1a8a78a016b622ae37e5ee82636994f9feb977e503d386e5363e"
 
     echo "Downloading Python version."
     case "$VERSION" in
