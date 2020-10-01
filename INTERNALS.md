@@ -1,7 +1,7 @@
 # Maintaining these scripts
 
-The `3.7.sh` script downloads some source code, then passes control to `docker`
-which runs `3.7.Dockerfile`. This configures dependencies, patches Python, and
+The `main.sh` script downloads some source code, then passes control to `docker`
+which runs `python.Dockerfile`. This configures dependencies, patches Python, and
 does the build.
 
 The shell script does nearly all of the downloading up-front. This allows the
@@ -10,13 +10,13 @@ The Dockerfile does include some `apt-get` calls, which I consider an
 acceptable compromise of this design goal.
 
 The Dockerfile patches the source code using `sed`, a custom Python script
-called `3.7.ignore_some_tests.py`, and patches that we apply using `quilt`.
+called `ignore_some_tests.py`, and patches that we apply using `quilt`.
 
 It uses `sed` when making changes that I do not intend to send upstream. It is
 easy to use `sed` to make one-line changes to various files, and these changes
 are resilient to the lines moving around slightly.
 
-The `3.7.ignore_some_tests.py` makes a lot of changes to the Python test suite,
+The `ignore_some_tests.py` makes a lot of changes to the Python test suite,
 focusing on removing tests that do not make sense within the context of an
 Android app. Most of these relate to disabling the use of Python subprocesses
 to run parts of the test suite. Launching subprocesses works properly within an
