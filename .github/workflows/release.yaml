@@ -22,9 +22,9 @@ jobs:
         export TAG_BUILD="${TAG#*-}"
         echo "PY_VERSION=${TAG_VERSION}"
         echo "BUILD_NUMBER=${TAG_BUILD}"
-        echo "::set-env name=TAG::${TAG}"
-        echo "::set-env name=PY_VERSION::${TAG_VERSION}"
-        echo "::set-env name=BUILD_NUMBER::${TAG_BUILD}"
+        echo "TAG=${TAG}" >> $GITHUB_ENV
+        echo "PY_VERSION=${TAG_VERSION}" >> $GITHUB_ENV
+        echo "BUILD_NUMBER=${TAG_BUILD}" >> $GITHUB_ENV
     - name: Build project
       run: bash -x main.sh -v ${{ env.PY_VERSION }} -n ${{ env.BUILD_NUMBER }}
     - name: Create Release
