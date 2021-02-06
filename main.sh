@@ -231,23 +231,26 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
 
     download jdk "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz" "f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
     download ndk "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip" "8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
-    download openssl "https://www.openssl.org/source/openssl-1.1.1g.tar.gz" "ddb04774f1e32f0c49751e21b67216ac87852ceb056b75209af2443400636d46"
+    download openssl "https://www.openssl.org/source/openssl-1.1.1i.tar.gz" "e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242"
     download libffi "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz" "72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
     download xz "https://tukaani.org/xz/xz-5.2.5.tar.gz" "f6f4910fd033078738bd82bfba4f49219d03b17eb0794eb91efbae419f4aba10"
     download bzip2 "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz" "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
     download sqlite3 "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz" "79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
-    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.4.tar.gz" "1d075c19e01e04d5628f931ba5fb6f57820070846463e58989568cc3bd01c8d3"
+    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.5.tar.gz" "23ec17bb5cafec87e286b308f3b0cdd9eb004f59610c9bb37cacfa98ee1ea11c"
 
     echo "Downloading Python version."
     case "$VERSION" in
         3.6)
-            download "python-3.6" "https://www.python.org/ftp/python/3.6.10/Python-3.6.10.tar.xz" "0a833c398ac8cd7c5538f7232d8531afef943c60495c504484f308dac3af40de"
+            download "python-3.6" "https://www.python.org/ftp/python/3.6.12/Python-3.6.12.tar.xz" "70953a9b5d6891d92e65d184c3512126a15814bee15e1eff2ddcce04334e9a99"
             ;;
         3.7)
-            download "python-3.7" "https://www.python.org/ftp/python/3.7.6/Python-3.7.6.tar.xz" "55a2cce72049f0794e9a11a84862e9039af9183603b78bc60d89539f82cf533f"
+            download "python-3.7" "https://www.python.org/ftp/python/3.7.9/Python-3.7.9.tar.xz" "91923007b05005b5f9bd46f3b9172248aea5abc1543e8a636d59e629c3331b01"
             ;;
         3.8)
-            download "python-3.8" "https://www.python.org/ftp/python/3.8.3/Python-3.8.3.tar.xz" "dfab5ec723c218082fe3d5d7ae17ecbdebffa9a1aea4d64aa3a2ecdd2e795864"
+            download "python-3.8" "https://www.python.org/ftp/python/3.8.7/Python-3.8.7.tar.xz" "ddcc1df16bb5b87aa42ec5d20a5b902f2d088caa269b28e01590f97a798ec50a"
+            ;;
+        3.9)
+            download "python-3.9" "https://www.python.org/ftp/python/3.9.1/Python-3.9.1.tar.xz" "991c3f8ac97992f3d308fefeb03a64db462574eadbff34ce8bc5bb583d9903ff"
             ;;
         *)
             echo "Invalid Python version: $VERSION"

@@ -105,7 +105,9 @@ RUN cd openssl-src && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 # requires itself to be installed globally during a cross-compile, and Python 3.6 additionally
 # requires Python 2 to be installed at build time.
 FROM toolchain as build_python
-RUN apt-get update -qq && apt-get -qq install python python3.6 python3.7 python3.8 pkg-config zip quilt
+RUN apt-get update -qq && apt-get -qq install software-properties-common dirmngr apt-transport-https lsb-release ca-certificates
+RUN apt-add-repository ppa:deadsnakes/ppa
+RUN apt-get update -qq && apt-get -qq install python python3.6 python3.7 python3.8 python3.9 pkg-config zip quilt
 
 # Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
