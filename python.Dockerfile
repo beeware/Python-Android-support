@@ -57,6 +57,20 @@ RUN cd sqlite3-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_
 RUN cd sqlite3-src && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
 RUN cd sqlite3-src && make install
 
+FROM toolchain as build_libxml2
+RUN apt-get update -qq && apt-get -qq install make build-essential
+ADD downloads/libxml2/* .
+RUN mv libxml2-* libxml2-src
+RUN cd libxml2-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/libxml2"
+RUN cd libxml2-src && make install
+
+FROM toolchain as build_expat
+RUN apt-get update -qq && apt-get -qq install make build-essential
+ADD downloads/expat/* .
+RUN mv expat-* expat-src
+RUN cd expat-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/expat"
+RUN cd expat-src && make install
+
 # Install bzip2 & lzma libraries, for stdlib's _bzip2 and _lzma modules.
 FROM toolchain as build_xz
 RUN apt-get update -qq && apt-get -qq install make
@@ -115,11 +129,13 @@ COPY --from=build_bz2 /opt/python-build/built/libbz2 /opt/python-build/built/lib
 COPY --from=build_xz /opt/python-build/built/xz /opt/python-build/built/xz
 COPY --from=build_libffi /opt/python-build/built/libffi /opt/python-build/built/libffi
 COPY --from=build_sqlite /opt/python-build/built/sqlite /opt/python-build/built/sqlite
+COPY --from=build_expat /opt/python-build/built/expat /opt/python-build/built/expat
+COPY --from=build_libxml2 /opt/python-build/built/libxml2 /opt/python-build/built/libxml2
 
 ENV OPENSSL_INSTALL_DIR=/opt/python-build/built/openssl
 ENV LIBBZ2_INSTALL_DIR="$BUILD_HOME/built/libbz2"
 ENV LIBXZ_INSTALL_DIR="$BUILD_HOME/built/xz"
-RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTALL_DIR"/lib/*.so /opt/python-build/built/libffi/lib/*.so /opt/python-build/built/xz/lib/*.so /opt/python-build/built/sqlite/lib/*.so "$JNI_LIBS"
+RUN mkdir -p "$JNI_LIBS" && cp -a "$OPENSSL_INSTALL_DIR"/lib/*.so "$LIBBZ2_INSTALL_DIR"/lib/*.so /opt/python-build/built/expat/lib/*.so /opt/python-build/built/libxml2/lib/*.so /opt/python-build/built/libffi/lib/*.so /opt/python-build/built/xz/lib/*.so /opt/python-build/built/sqlite/lib/*.so "$JNI_LIBS"
 ENV PKG_CONFIG_PATH="/opt/python-build/built/libffi/lib/pkgconfig:/opt/python-build/built/xz/lib/pkgconfig"
 
 # Download & patch Python. We assume that there is only one Python-${VERSION}.*.tar.xz file.
