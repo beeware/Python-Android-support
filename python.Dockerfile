@@ -42,7 +42,7 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
     RANLIB=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ranlib \
     STRIP=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-strip \
     READELF=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-readelf \
-    CFLAGS="-fPIC -Wall -O0 -g"
+    CFLAGS="-fPIC -Wall -Os" LDFLAGS="-Wl,-S"
 
 # We build sqlite using a tarball from Ubuntu. We need to patch config.sub & config.guess so
 # autoconf can accept our weird TOOLCHAIN_TRIPLE value. It requires tcl8.6-dev and build-essential
