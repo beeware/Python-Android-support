@@ -276,7 +276,7 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
     # Make a ZIP file, writing it first to `.tmp` so that we atomically clobber an
     # existing ZIP file rather than attempt to merge the new contents with old.
     pushd build/"$VERSION"/app > /dev/null
-    zip -x@../../../excludes/all/excludes -r -"${COMPRESS_LEVEL}" "../../../dist/Python-$VERSION-Android-support${BUILD_TAG}.zip".tmp .
+    zip -x@../../../excludes/all/excludes -y -r -"${COMPRESS_LEVEL}" "../../../dist/Python-$VERSION-Android-support${BUILD_TAG}.zip".tmp .
     mv "../../../dist/Python-$VERSION-Android-support${BUILD_TAG}.zip".tmp "../../../dist/Python-$VERSION-Android-support${BUILD_TAG}.zip"
     popd
 }
