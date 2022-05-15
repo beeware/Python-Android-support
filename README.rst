@@ -2,7 +2,7 @@ Python Android Support
 ======================
 
 This is a meta-package for building a version of CPython that can be embedded
-into an Android project. It supports Python versions 3.6, 3.7, 3.8, and 3.9.
+into an Android project. It supports Python versions 3.7, 3.8, and 3.9.
 
 It works by downloading, patching, and building CPython and selected pre-
 requisites, packaging them as linkable dynamic libraries, and packaging
@@ -32,7 +32,7 @@ This should:
 2. Patch them as required for compatibility with the selected OS
 3. Build the packages.
 
-The build products will be in the ``build`` directory; the compiled artifacts
+The build products will be in the ``build`` directory; the compiled artefacts
 will be in the ``dist`` directory.
 
 You can then follow `these same instructions <./USAGE.md>`__ for building
