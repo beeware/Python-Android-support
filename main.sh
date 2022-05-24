@@ -102,7 +102,7 @@ function build_one_abi() {
     #
     # For debugging the Docker image, you can use the name python-android-support-local:latest.
     TAG_NAME="python-android-support-local:$(python3 -c 'import random; print(random.randint(0, 1e16))')"
-    DOCKER_BUILDKIT=1 docker build --platform linux/x86_64 --tag ${TAG_NAME} --tag python-android-support-local:latest \
+    DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --tag ${TAG_NAME} --tag python-android-support-local:latest \
         --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg PYTHON_SOVERSION="${PYTHON_SOVERSION}" \
         --build-arg COMPRESS_LEVEL="${COMPRESS_LEVEL}" --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" \
         --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" \
