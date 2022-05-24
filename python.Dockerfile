@@ -7,7 +7,7 @@ RUN apt-get update -qq && apt-get -qq install unzip rsync
 # Install toolchains: Android NDK & Java JDK.
 WORKDIR /opt/ndk
 ADD downloads/ndk/* .
-RUN unzip -q android-ndk-*-linux-x86_64.zip && rm android-ndk-*-linux-x86_64.zip && mv android-ndk-* android-ndk
+RUN unzip -q android-ndk-*-linux.zip && rm android-ndk-*.zip && mv android-ndk-* android-ndk
 ENV NDK /opt/ndk/android-ndk
 WORKDIR /opt/jdk
 ADD downloads/jdk/* .
@@ -34,14 +34,14 @@ ENV TOOLCHAIN_TRIPLE $TOOLCHAIN_TRIPLE
 ENV TOOLCHAIN=$NDK/toolchains/llvm/prebuilt/$HOST_TAG
 ARG COMPILER_TRIPLE
 ENV COMPILER_TRIPLE=$COMPILER_TRIPLE
-ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
-    AS=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-as \
+ENV AR=$TOOLCHAIN/bin/llvm-ar \
+    AS=$TOOLCHAIN/bin/llvm-as \
     CC=$TOOLCHAIN/bin/${COMPILER_TRIPLE}-clang \
     CXX=$TOOLCHAIN/bin/${COMPILER_TRIPLE}-clang++ \
-    LD=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ld \
-    RANLIB=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ranlib \
-    STRIP=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-strip \
-    READELF=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-readelf \
+    LD=$TOOLCHAIN/bin/ld \
+    RANLIB=$TOOLCHAIN/bin/llvm-ranlib \
+    STRIP=$TOOLCHAIN/bin/llvm-strip \
+    READELF=$TOOLCHAIN/bin/llvm-readelf \
     CFLAGS="-fPIC -Wall -O0 -g"
 
 # We build sqlite using a tarball from Ubuntu. We need to patch config.sub & config.guess so
@@ -51,8 +51,8 @@ ENV AR=$TOOLCHAIN/bin/$TOOLCHAIN_TRIPLE-ar \
 FROM toolchain as build_sqlite
 RUN apt-get update -qq && apt-get -qq install make autoconf autotools-dev tcl8.6-dev build-essential
 ADD downloads/sqlite3/* .
-RUN mv sqlite3-* sqlite3-src
-RUN cd sqlite3-src && autoreconf && cp -f /usr/share/misc/config.sub . && cp -f /usr/share/misc/config.guess .
+RUN unzip -q version-*.zip && mv sqlite-* sqlite3-src
+RUN cd sqlite3-src && autoreconf
 RUN cd sqlite3-src && ./configure --host "$TOOLCHAIN_TRIPLE" --build "$COMPILER_TRIPLE" --prefix="$BUILD_HOME/built/sqlite"
 RUN cd sqlite3-src && sed -i -E 's,avoid_version=no,avoid_version=yes,' ltmain.sh libtool
 RUN cd sqlite3-src && make install
@@ -102,12 +102,11 @@ RUN cd openssl-src && make SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 RUN cd openssl-src && make install SHLIB_EXT='${SHLIB_VERSION_NUMBER}.so'
 
 # This build container builds Python, rubicon-java, and any dependencies. Each Python version
-# requires itself to be installed globally during a cross-compile, and Python 3.6 additionally
-# requires Python 2 to be installed at build time.
+# requires itself to be installed globally during a cross-compile.
 FROM toolchain as build_python
 RUN apt-get update -qq && apt-get -qq install software-properties-common dirmngr apt-transport-https lsb-release ca-certificates
 RUN apt-add-repository ppa:deadsnakes/ppa
-RUN apt-get update -qq && apt-get -qq install python python3.6 python3.7 python3.8 python3.9 pkg-config zip quilt
+RUN apt-get update -qq && apt-get -qq install python3.7 python3.8 python3.9 python3.10 python3.11 pkg-config zip quilt
 
 # Get libs & vars
 COPY --from=build_openssl /opt/python-build/built/openssl /opt/python-build/built/openssl
@@ -152,6 +151,9 @@ RUN cd python-src && if [ "$(wc -l < patches/series)" != "0" ] ; then quilt push
 # Build Python, pre-configuring some values so it doesn't check if those exist.
 ENV SYSROOT_LIB=${TOOLCHAIN}/sysroot/usr/lib/${TOOLCHAIN_TRIPLE}/${ANDROID_API_LEVEL}/ \
     SYSROOT_INCLUDE=${NDK}/sysroot/usr/include/
+# Add any version-specific configuration flags
+ARG PYTHON_EXTRA_CONFIGURE_FLAGS
+ENV PYTHON_EXTRA_CONFIGURE_FLAGS $PYTHON_EXTRA_CONFIGURE_FLAGS
 # Call ./configure with enough parameters to work properly on Python 3.6 and 3.7.
 # Python 3.6 needs OpenSSL's headers in CFLAGS; Python 3.7+ consumes it from --with-openssl=.
 # Python 3.6 needs ac_cv_header_langinfo_h=no because it lacks a more specific check for nl_langinfo
@@ -164,6 +166,7 @@ RUN cd python-src && LDFLAGS="$(pkg-config --libs-only-L libffi) $(pkg-config --
     ac_cv_header_langinfo_h=no \
     ac_cv_file__dev_ptc=no --without-ensurepip ac_cv_little_endian_double=yes \
     --prefix="$PYTHON_INSTALL_DIR" \
+    $PYTHON_EXTRA_CONFIGURE_FLAGS \
     ac_cv_func_setuid=no ac_cv_func_seteuid=no ac_cv_func_setegid=no ac_cv_func_getresuid=no ac_cv_func_setresgid=no ac_cv_func_setgid=no ac_cv_func_sethostname=no ac_cv_func_setresuid=no ac_cv_func_setregid=no ac_cv_func_setreuid=no ac_cv_func_getresgid=no ac_cv_func_setregid=no ac_cv_func_clock_settime=no ac_cv_header_termios_h=no ac_cv_func_sendfile=no ac_cv_header_spawn_h=no ac_cv_func_posix_spawn=no \
     ac_cv_func_setlocale=no ac_cv_working_tzset=no ac_cv_member_struct_tm_tm_zone=no ac_cv_func_sched_setscheduler=no
 # Override ./configure results to futher force Python not to use some libc calls that trigger blocked syscalls.
@@ -226,7 +229,7 @@ RUN cd rubicon-java-src && \
 RUN mv rubicon-java-src/build/librubicon.so $JNI_LIBS
 RUN mkdir -p /opt/python-build/app/libs/ && mv rubicon-java-src/build/rubicon.jar $APPROOT/app/libs/
 
-ENV ASSETS_DIR $APPROOT/app/src/main/assets/
+ENV ASSETS_DIR $APPROOT/app/src/main/assets
 RUN mkdir -p "${ASSETS_DIR}"
 
 # Create pythonhome.zip for this CPU architecture, filtering pythonhome.zip using pythonhome-excludes

@@ -82,9 +82,15 @@ function build_one_abi() {
     esac
 
     local PYTHON_SOVERSION="${PYTHON_VERSION}"
-    if [ "$PYTHON_VERSION" = "3.7" ] || [ "$PYTHON_VERSION" = "3.6" ] ; then
-        # 3.6 and 3.7 use 3.6m/3.7m
+    local PYTHON_EXTRA_CONFIGURE_FLAGS=""
+    if [ "$PYTHON_VERSION" = "3.7" ] ; then
+        # 3.7 uses 3.7m
         PYTHON_SOVERSION="${PYTHON_VERSION}m"
+    fi
+
+    if [ "$PYTHON_VERSION" = "3.11" ] ; then
+        # 3.11 requires --with-build-python
+        PYTHON_EXTRA_CONFIGURE_FLAGS="--with-build-python=python3.11"
     fi
 
     # We use Docker to run the build. We rely on Docker's build cache to allow the
@@ -96,11 +102,12 @@ function build_one_abi() {
     #
     # For debugging the Docker image, you can use the name python-android-support-local:latest.
     TAG_NAME="python-android-support-local:$(python3 -c 'import random; print(random.randint(0, 1e16))')"
-    DOCKER_BUILDKIT=1 docker build --tag ${TAG_NAME} --tag python-android-support-local:latest \
+    DOCKER_BUILDKIT=1 docker build --platform linux/x86_64 --tag ${TAG_NAME} --tag python-android-support-local:latest \
         --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg PYTHON_SOVERSION="${PYTHON_SOVERSION}" \
         --build-arg COMPRESS_LEVEL="${COMPRESS_LEVEL}" --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" \
         --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" \
         --build-arg TOOLCHAIN_TRIPLE="$TOOLCHAIN_TRIPLE" --build-arg ANDROID_API_LEVEL="$ANDROID_API_LEVEL" \
+        --build-arg PYTHON_EXTRA_CONFIGURE_FLAGS="$PYTHON_EXTRA_CONFIGURE_FLAGS" \
         -f python.Dockerfile .
     # Extract the build artifacts we need to create our zip file.
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/approot/. /mnt/.
@@ -173,7 +180,7 @@ function main() {
     # DEFAULT_* variables for inclusion into help output.
     local DEFAULT_VERSION="3.7"
     local VERSION="$DEFAULT_VERSION"
-    local DEFAULT_TARGET_ABIS="x86,x86_64,armeabi-v7a,arm64-v8a"
+    local DEFAULT_TARGET_ABIS="x86_64,arm64-v8a"
     local TARGET_ABIS="$DEFAULT_TARGET_ABIS"
     local DEFAULT_COMPRESS_LEVEL="8"
     local COMPRESS_LEVEL="$DEFAULT_COMPRESS_LEVEL"
@@ -200,15 +207,15 @@ function main() {
 
 Build ZIP file of Python resources for Android, including CPython compiled as a .so.
 
--v: Specify Python version to build. For example: -v 3.6
+-v: Specify Python version to build. For example: -v 3.7
     Default: ${DEFAULT_VERSION}
 
 -a: Specify Android ABIs to build, separated by commas. For example: -a x86,arm64-v8a
     Default: ${TARGET_ABIS}
 
 -n: Specify build number. If specified, this gets added to the filename prepended by a dot.
-    For example, -n b5 would create Python-3.6-Android-support.b5.zip when building Python 3.6.
-    By default, e.g. for Python 3.6, we generate the file Python-3.6-Android-support.zip.
+    For example, -n b5 would create Python-3.X-Android-support.b5.zip when building Python 3.X.
+    By default, e.g. for Python 3.X, we generate the file Python-3.X-Android-support.custom.zip.
 
 -z: Specify compression level to use when creating ZIP files. For example, -z 0 is fastest.
     Default: ${DEFAULT_COMPRESS_LEVEL}
@@ -221,7 +228,7 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
     local BUILD_TAG
     if [ -z "${BUILD_NUMBER:-}" ]; then
         echo "Building untagged build"
-        BUILD_TAG=""
+        BUILD_TAG=".custom"
     else
         echo "Building ${BUILD_NUMBER}"
         BUILD_TAG=".${BUILD_NUMBER}"
@@ -230,27 +237,30 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
     echo "Downloading compile-time dependencies."
 
     download jdk "https://github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u242-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u242b08.tar.gz" "f39b523c724d0e0047d238eb2bb17a9565a60574cf651206c867ee5fc000ab43"
-    download ndk "https://dl.google.com/android/repository/android-ndk-r20b-linux-x86_64.zip" "8381c440fe61fcbb01e209211ac01b519cd6adf51ab1c2281d5daad6ca4c8c8c"
-    download openssl "https://www.openssl.org/source/openssl-1.1.1i.tar.gz" "e8be6a35fe41d10603c3cc635e93289ed00bf34b79671a3a4de64fcee00d5242"
+    download ndk "https://dl.google.com/android/repository/android-ndk-r23b-linux.zip" "c6e97f9c8cfe5b7be0a9e6c15af8e7a179475b7ded23e2d1c1fa0945d6fb4382"
+    download openssl "https://www.openssl.org/source/openssl-1.1.1o.tar.gz" "9384a2b0570dd80358841464677115df785edb941c71211f75076d72fe6b438f"
     download libffi "https://github.com/libffi/libffi/releases/download/v3.3/libffi-3.3.tar.gz" "72fba7922703ddfa7a028d513ac15a85c8d54c8d67f55fa5a4802885dc652056"
     download xz "https://tukaani.org/xz/xz-5.2.5.tar.gz" "f6f4910fd033078738bd82bfba4f49219d03b17eb0794eb91efbae419f4aba10"
     download bzip2 "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz" "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269"
-    download sqlite3 "http://archive.ubuntu.com/ubuntu/pool/main/s/sqlite3/sqlite3_3.11.0.orig.tar.xz" "79fb8800b8744337d5317270899a5a40612bb76f81517e131bf496c26b044490"
-    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.5.tar.gz" "23ec17bb5cafec87e286b308f3b0cdd9eb004f59610c9bb37cacfa98ee1ea11c"
+    download sqlite3 "https://github.com/sqlite/sqlite/archive/refs/tags/version-3.35.0.zip" "f85ba70e340428fbf45ed1bf390ddcc622c7f8f4b30e60d063c6b6f8d78924ae"
+    download rubicon-java "https://github.com/beeware/rubicon-java/archive/v0.2.6.tar.gz" "0386d84182b347c0e64947579c3e853e9b72d375094fa6d00942f9a7635ca6d1"
 
     echo "Downloading Python version."
     case "$VERSION" in
-        3.6)
-            download "python-3.6" "https://www.python.org/ftp/python/3.6.12/Python-3.6.12.tar.xz" "70953a9b5d6891d92e65d184c3512126a15814bee15e1eff2ddcce04334e9a99"
-            ;;
         3.7)
-            download "python-3.7" "https://www.python.org/ftp/python/3.7.9/Python-3.7.9.tar.xz" "91923007b05005b5f9bd46f3b9172248aea5abc1543e8a636d59e629c3331b01"
+            download "python-3.7" "https://www.python.org/ftp/python/3.7.13/Python-3.7.13.tar.xz" "99f106275df8899c3e8cb9d7c01ce686c202ef275953301427194693de5bef84"
             ;;
         3.8)
-            download "python-3.8" "https://www.python.org/ftp/python/3.8.7/Python-3.8.7.tar.xz" "ddcc1df16bb5b87aa42ec5d20a5b902f2d088caa269b28e01590f97a798ec50a"
+            download "python-3.8" "https://www.python.org/ftp/python/3.8.13/Python-3.8.13.tar.xz" "6f309077012040aa39fe8f0c61db8c0fa1c45136763299d375c9e5756f09cf57"
             ;;
         3.9)
-            download "python-3.9" "https://www.python.org/ftp/python/3.9.1/Python-3.9.1.tar.xz" "991c3f8ac97992f3d308fefeb03a64db462574eadbff34ce8bc5bb583d9903ff"
+            download "python-3.9" "https://www.python.org/ftp/python/3.9.12/Python-3.9.12.tar.xz" "2cd94b20670e4159c6d9ab57f91dbf255b97d8c1a1451d1c35f4ec1968adf971"
+            ;;
+        3.10)
+            download "python-3.10" "https://www.python.org/ftp/python/3.10.4/Python-3.10.4.tar.xz" "80bf925f571da436b35210886cf79f6eb5fa5d6c571316b73568343451f77a19"
+            ;;
+        3.11)
+            download "python-3.11" "https://www.python.org/ftp/python/3.11.0/Python-3.11.0b1.tar.xz" "dccac9b03dd3fe5cd10bc547579eb0be81a1d8971ec2a866b03dec5391f5ad25"
             ;;
         *)
             echo "Invalid Python version: $VERSION"
