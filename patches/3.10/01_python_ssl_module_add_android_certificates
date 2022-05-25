@@ -1,0 +1,48 @@
+From 86b7aee31eb66b99e2e9ff55f83cb2e6393dd8d3 Mon Sep 17 00:00:00 2001
+From: Asheesh Laroia <asheesh@asheesh.org>
+Date: Fri, 19 Jun 2020 16:47:25 -0700
+Subject: [PATCH] Parse certificate authority certs from Android
+ /etc/security/cacerts directory
+
+---
+ Lib/ssl.py           | 11 +++++++++++
+ Lib/test/test_ssl.py |  1 +
+ 2 files changed, 12 insertions(+)
+
+diff --git a/Lib/ssl.py b/Lib/ssl.py
+index 0726caee49..3878bdd8fa 100644
+--- a/Lib/ssl.py
++++ b/Lib/ssl.py
+@@ -572,6 +572,17 @@ class SSLContext(_SSLContext):
+         if sys.platform == "win32":
+             for storename in self._windows_cert_stores:
+                 self._load_windows_store_certs(storename, purpose)
++        if os.path.exists('/etc/security/cacerts'):
++            certs = []
++            for basename in os.listdir('/etc/security/cacerts'):
++                with open('/etc/security/cacerts/' + basename) as fd:
++                    s = fd.read()
++                    if 'END CERTIFICATE' not in s:
++                        continue
++                    lines = s.split('\n')
++                    line_end_certificate = [i for i, line in enumerate(lines) if 'END CERTIFICATE' in line][0]
++                    certs.append('\n'.join(lines[0:line_end_certificate+1]))
++            self.load_verify_locations(None, None, '\n'.join(certs))
+         self.set_default_verify_paths()
+ 
+     if hasattr(_SSLContext, 'minimum_version'):
+diff --git a/Lib/test/test_ssl.py b/Lib/test/test_ssl.py
+index 0bc0a8c452..3c79debf3e 100644
+--- a/Lib/test/test_ssl.py
++++ b/Lib/test/test_ssl.py
+@@ -1580,6 +1580,7 @@ class ContextTests(unittest.TestCase):
+     @unittest.skipIf(sys.platform == "win32", "not-Windows specific")
+     @unittest.skipIf(IS_LIBRESSL, "LibreSSL doesn't support env vars")
+     def test_load_default_certs_env(self):
++        raise unittest.SkipTest("Skipping this test for Python within an Android app")
+         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+         with support.EnvironmentVarGuard() as env:
+             env["SSL_CERT_DIR"] = CAPATH
+-- 
+2.27.0
+
