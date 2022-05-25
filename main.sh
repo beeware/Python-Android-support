@@ -100,9 +100,10 @@ function build_one_abi() {
     # We do also use a temporary tag name so that we can use `rsync` to pull some
     # data out of the image.
     #
-    # For debugging the Docker image, you can use the name python-android-support-local:latest.
-    TAG_NAME="python-android-support-local:$(python3 -c 'import random; print(random.randint(0, 1e16))')"
-    DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --tag ${TAG_NAME} --tag python-android-support-local:latest \
+    # For debugging the Docker image, you can use the name python-android-support-<version>:<abi>.
+    # e.g. python-android-support-3.7:arm64-v8a
+    TAG_NAME="python-android-support-${PYTHON_VERSION}:${TARGET_ABI_SHORTNAME}"
+    DOCKER_BUILDKIT=1 docker build --platform linux/amd64 --tag ${TAG_NAME} \
         --build-arg PYTHON_VERSION="${PYTHON_VERSION}" --build-arg PYTHON_SOVERSION="${PYTHON_SOVERSION}" \
         --build-arg COMPRESS_LEVEL="${COMPRESS_LEVEL}" --build-arg COMPILER_TRIPLE="${COMPILER_TRIPLE}" \
         --build-arg OPENSSL_BUILD_TARGET="$OPENSSL_BUILD_TARGET" --build-arg TARGET_ABI_SHORTNAME="$TARGET_ABI_SHORTNAME" \
@@ -113,6 +114,8 @@ function build_one_abi() {
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/approot/. /mnt/.
     # Extract header files
     docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/app/include/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/built/python/include/ /mnt/
+    # Extract log files
+    docker run -v "${PWD}"/build/"${PYTHON_VERSION}"/logs/:/mnt/ --rm --entrypoint rsync "$TAG_NAME" -a /opt/python-build/logs/ /mnt/
 
     # Docker creates files as root; reown as the local user
     fix_permissions
@@ -121,8 +124,6 @@ function build_one_abi() {
     mv "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig.h "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/pyconfig-${TARGET_ABI_SHORTNAME}.h
     # Inject a platform-agnostic pyconfig.h wrapper.
     cp "${PWD}/patches/all/pyconfig.h" "${PWD}"/build/"${PYTHON_VERSION}"/app/include/python"${PYTHON_SOVERSION}"/
-    # Remove temporary local tag.
-    docker rmi "$TAG_NAME" > /dev/null
 }
 
 # Download a file into downloads/$name/$filename and verify its sha256sum.
