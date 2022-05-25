@@ -42,7 +42,8 @@ ENV AR=$TOOLCHAIN/bin/llvm-ar \
     RANLIB=$TOOLCHAIN/bin/llvm-ranlib \
     STRIP=$TOOLCHAIN/bin/llvm-strip \
     READELF=$TOOLCHAIN/bin/llvm-readelf \
-    CFLAGS="-fPIC -Wall -Os" LDFLAGS="-Wl,-S"
+    CFLAGS="-fPIC -Wall -Os" \
+    LDFLAGS="-Wl,-S"
 
 # Set up a directory for logs.
 ENV LOGS_DIR=${BUILD_HOME}/logs/${TARGET_ABI_SHORTNAME}
@@ -168,7 +169,7 @@ ENV SYSROOT_LIB=${TOOLCHAIN}/sysroot/usr/lib/${TOOLCHAIN_TRIPLE}/${ANDROID_API_L
 ARG PYTHON_EXTRA_CONFIGURE_FLAGS
 ENV PYTHON_EXTRA_CONFIGURE_FLAGS $PYTHON_EXTRA_CONFIGURE_FLAGS
 # Call ./configure with enough parameters to work.
-RUN cd python-src && LDFLAGS="$(pkg-config --libs-only-L libffi) $(pkg-config --libs-only-L liblzma) -L${LIBBZ2_INSTALL_DIR}/lib -L$OPENSSL_INSTALL_DIR/lib" \
+RUN cd python-src && LDFLAGS="${LDFLAGS} $(pkg-config --libs-only-L libffi) $(pkg-config --libs-only-L liblzma) -L${LIBBZ2_INSTALL_DIR}/lib -L$OPENSSL_INSTALL_DIR/lib" \
     CFLAGS="${CFLAGS} -I${LIBBZ2_INSTALL_DIR}/include $(pkg-config --cflags-only-I libffi) $(pkg-config --cflags-only-I liblzma)" \
     ./configure \
     --host "$TOOLCHAIN_TRIPLE" \
