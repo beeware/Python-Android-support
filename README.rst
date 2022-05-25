@@ -2,7 +2,7 @@ Python Android Support
 ======================
 
 This is a meta-package for building a version of CPython that can be embedded
-into an Android project. It supports Python versions 3.7, 3.8, and 3.9.
+into an Android project. It supports Python versions 3.7 through 3.11 (inclusive).
 
 It works by downloading, patching, and building CPython and selected pre-
 requisites, packaging them as linkable dynamic libraries, and packaging
@@ -45,7 +45,7 @@ When you do a local build, you can use the ``support_package = ...`` configurati
 option in a briefcase app's ``pyproject.toml`` to point the app at your local
 support library.
 
-You can run ``python3 test_all_extensions_built.py dist/Python-*-Android-support.zip``
+You can run ``python3 test_all_extensions_built.py dist/Python-*-Android-support.custom.zip``
 to quickly validate that the expected compiled extension modules are available for a
 given build.
 
