@@ -2,7 +2,8 @@ Python Android Support
 ======================
 
 This is a meta-package for building a version of CPython that can be embedded
-into an Android project. It supports Python versions 3.7 through 3.11 (inclusive).
+into an Android project. It supports Python versions 3.7 through 3.10
+(inclusive); experimental support for Py3.11 also exists.
 
 It works by downloading, patching, and building CPython and selected pre-
 requisites, packaging them as linkable dynamic libraries, and packaging
@@ -49,6 +50,11 @@ You can run ``python3 test_all_extensions_built.py dist/Python-*-Android-support
 to quickly validate that the expected compiled extension modules are available for a
 given build.
 
+You can also use the `Python Support testbed
+<https://github.com/beeware/Python-support-testbed>` project to validate that
+the core pieces of the support package (including modules that have historically
+been problematic) are all present and working.
+
 To run the CPython test suite within an app context, you can add this code to a
 briefcase app::
 
@@ -68,5 +74,3 @@ briefcase app::
 
 Note that you must modify the ``pythonhome`` excludes list for this to work properly,
 which will make the support package larger.
-
-.. _can be downloaded: https://briefcase-support.org/python?platform=android&version=3.7
