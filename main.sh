@@ -262,13 +262,13 @@ Build ZIP file of Python resources for Android, including CPython compiled as a 
             download "python-3.8" "https://www.python.org/ftp/python/3.8.13/Python-3.8.13.tar.xz" "6f309077012040aa39fe8f0c61db8c0fa1c45136763299d375c9e5756f09cf57"
             ;;
         3.9)
-            download "python-3.9" "https://www.python.org/ftp/python/3.9.12/Python-3.9.12.tar.xz" "2cd94b20670e4159c6d9ab57f91dbf255b97d8c1a1451d1c35f4ec1968adf971"
+            download "python-3.9" "https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tar.xz" "125b0c598f1e15d2aa65406e83f792df7d171cdf38c16803b149994316a3080f"
             ;;
         3.10)
-            download "python-3.10" "https://www.python.org/ftp/python/3.10.4/Python-3.10.4.tar.xz" "80bf925f571da436b35210886cf79f6eb5fa5d6c571316b73568343451f77a19"
+            download "python-3.10" "https://www.python.org/ftp/python/3.10.5/Python-3.10.5.tar.xz" "8437efd5b106ef0a75aabfbf23d880625120a73a86a22ade4d2e2e68d7b74486"
             ;;
         3.11)
-            download "python-3.11" "https://www.python.org/ftp/python/3.11.0/Python-3.11.0b1.tar.xz" "dccac9b03dd3fe5cd10bc547579eb0be81a1d8971ec2a866b03dec5391f5ad25"
+            download "python-3.11" "https://www.python.org/ftp/python/3.11.0/Python-3.11.0b3.tar.xz" "c9b99f5315ea30f8e9fcbce6807a3739e875480d29124e6d9940f6fabcb7c902"
             ;;
         *)
             echo "Invalid Python version: $VERSION"
