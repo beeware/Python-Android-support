@@ -34,14 +34,21 @@ function build_one_abi() {
     PYTHON_VERSION="$2"
     COMPRESS_LEVEL="$3"
 
-    # Using ANDROID_API_LEVEL=21 for two reasons:
+    # Using ANDROID_API_LEVEL=26 (i.e., Android 8.0+) for two reasons:
     #
     # - >= 21 gives us a `localeconv` libc function (admittedly a
     #   non-working one), which makes compiling (well, linking) Python
     #   easier.
     #
     # - 64-bit architectures only start existing at API level 21.
-    ANDROID_API_LEVEL=21
+    #
+    # - < 26 has a limit on the number of local references. This
+    #   can cause crashes for some code.
+    #
+    # - As of June 2022, Android 8.0+ devices comprise ~83.5% of all
+    #   devices seen in the wild.
+    ANDROID_API_LEVEL=26
+
     # Compute the compiler name & binutils prefix name. See also:
     # https://developer.android.com/ndk/guides/other_build_systems
 
