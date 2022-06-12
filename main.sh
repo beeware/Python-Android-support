@@ -188,7 +188,7 @@ function main() {
     # DEFAULT_* variables for inclusion into help output.
     local DEFAULT_VERSION="3.7"
     local VERSION="$DEFAULT_VERSION"
-    local DEFAULT_TARGET_ABIS="x86_64,arm64-v8a"
+    local DEFAULT_TARGET_ABIS="x86_64,armeabi-v7a,arm64-v8a"
     local TARGET_ABIS="$DEFAULT_TARGET_ABIS"
     local DEFAULT_COMPRESS_LEVEL="8"
     local COMPRESS_LEVEL="$DEFAULT_COMPRESS_LEVEL"
