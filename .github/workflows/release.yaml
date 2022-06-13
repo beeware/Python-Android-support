@@ -34,9 +34,20 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        release_name: ${{ github.ref }}
         draft: true
         prerelease: false
+        body: |
+          Build ${{ env.BUILD_NUMBER }} of the BeeWare Android support package for Python ${{ env.PY_VERSION }}.
+
+          Contains:
+
+          Python ${{ env.BUILD_NUMBER }}.?
+          OpenSSL 1.1.1o
+          xz 5.2.5
+          bzip2 1.0.8
+          sqlite3 3.35.0
+          rubicon 0.2.6
     - name: Upload Release Asset to Github
       uses: actions/upload-release-asset@v1
       env:
