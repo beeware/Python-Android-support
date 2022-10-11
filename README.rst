@@ -1,3 +1,7 @@
+**This project has been archived. It was used by Briefcase 0.3.9 and earlier to
+support Android projects; however, that role is now performed by `Chaquopy
+<https://chqauo.com>`__.**
+
 Python Android Support
 ======================
 
@@ -18,7 +22,7 @@ version of the support package to build complete Android applications. See
 `Briefcase's documentation <https://briefcase.readthedocs.io>`__ for more
 details.
 
-Pre-built versions of the frameworks `can be downloaded`_ and added to your
+Pre-built versions of the frameworks can be downloaded and added to your
 project. See `this documentation <./USAGE.md>`__ for more details on how to
 build an Android project using this support package.
 
